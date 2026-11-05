@@ -1,0 +1,20 @@
+appointment_id,patient_id,doctor_id,speciality,visit_type,date,start_time,end_time,status
+A001,P01,D1,Cataract,new,2026-10-12,09:00,09:20,completed
+A002,P09,D1,Cataract,new,2026-10-14,10:00,10:20,completed
+A003,P13,D3,Retina,new,2026-10-15,11:00,11:20,completed
+A004,P14,D4,Dry eye,new,2026-10-20,15:00,15:20,completed
+A005,P15,D2,Glaucoma,new,2026-10-21,09:40,10:00,completed
+A006,P18,D1,Cataract,new,2026-10-26,11:20,11:40,completed
+A090,P16,D1,General,new,2026-11-03,10:00,10:20,cancelled
+A101,P01,D1,Cataract,new,2026-11-03,09:00,09:20,booked
+A102,P02,D1,General,new,2026-11-03,09:20,09:40,booked
+A103,P03,D3,Retina,new,2026-11-02,11:00,11:20,booked
+A104,P04,D3,Retina,new,2026-11-02,12:30,12:50,booked
+A105,P05,D2,Glaucoma,new,2026-11-04,10:00,10:20,booked
+A106,P06,D4,Dry eye,new,2026-11-05,14:00,14:20,booked
+A107,P07,D5,Paediatric,new,2026-11-07,09:00,09:20,booked
+A108,P08,D2,Cataract,new,2026-11-06,12:40,13:00,booked
+A109,P09,D1,Cataract,follow_up,2026-11-10,15:00,15:10,booked
+A110,P10,D4,Refractive,new,2026-11-12,11:00,11:20,booked
+A111,P11,D3,General,new,2026-11-19,16:00,16:20,booked
+A112,P12,D5,Squint,new,2026-11-23,09:40,10:00,booked

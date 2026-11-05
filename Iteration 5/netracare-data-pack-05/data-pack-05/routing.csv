@@ -1,0 +1,11 @@
+sample_id,message,expected_speciality,also_accept,expected_doctors,note
+R01,My optician said the pressure in my eyes is high,Glaucoma,,Dr. Meera Iyer,
+R02,I have had diabetes for 10 years and never had my eyes checked,Retina,,Dr. Kiran Shah,
+R03,My vision has been getting misty over the last year and headlights dazzle me at night,Cataract,,"Dr. Anand Rao, Dr. Meera Iyer",
+R04,My 5 year old's left eye turns inwards,Paediatric,Squint,Dr. Vikram Menon,Squint is also correct; same doctor
+R05,I want to get rid of my glasses for good,Refractive,,Dr. Fatima Khan,
+R06,My eyes feel sandy and tired after a whole day on the laptop,Dry eye,,Dr. Fatima Khan,Different words from the document
+R08,Straight lines on the door frame look wavy to me and it's been slowly getting worse,Retina,,Dr. Kiran Shah,
+R11,There is a small white spot on the front of my eye for a few months,Cornea,,Dr. Fatima Khan,
+R23,"Doctor ne bola eye pressure high hai, check karwana hai",Glaucoma,,Dr. Meera Iyer,"Hinglish: the doctor said my eye pressure is high, I want a check"
+R30,My back hurts when I sit for too long,none,,none,Not an eye problem; the reply says NetraCare only looks after eyes

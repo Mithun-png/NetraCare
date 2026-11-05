@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetraCare Iteration 3: Patient Chat</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single reading column of numbered brief sections, with a wide weekly OPD grid as the one visual anchor. */
+:root {
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --ink: #14212b;
+  --muted: #55636e;
+  --line: #d8e0e6;
+  --accent: #0d6e7a;
+  --accent-soft: #e2f1f2;
+  --surgery: #f4e6d4;
+  --surgery-ink: #7a4a12;
+  --off: #eef1f4;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171d; --surface: #16212a; --ink: #e4ebf0; --muted: #9aa9b4; --line: #2a3a46;
+    --accent: #5cc3cd; --accent-soft: #143238; --surgery: #3a2a17; --surgery-ink: #f0c48a;
+    --off: #1b262e; --danger: #f2877c; --danger-soft: #3a1b18; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171d; --surface: #16212a; --ink: #e4ebf0; --muted: #9aa9b4; --line: #2a3a46;
+  --accent: #5cc3cd; --accent-soft: #143238; --surgery: #3a2a17; --surgery-ink: #f0c48a;
+  --off: #1b262e; --danger: #f2877c; --danger-soft: #3a1b18; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 400 17px/1.6 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 64px;
+}
+.wrap { max-width: 860px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.6rem; font-weight: 700; }
+h3 { font-size: 1.1rem; font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); }
+.eyebrow { font: 500 0.78rem/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.mono { font-family: var(--font-mono); font-size: 0.92em; font-variant-numeric: tabular-nums; }
+
+/* Hero */
+header.hero { padding-block: 56px 40px; border-bottom: 1px solid var(--line); display: grid; gap: 28px; grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+.hero .lede { display: grid; gap: 16px; min-width: 0; }
+.hero .sub { font-size: 1.2rem; color: var(--muted); }
+.snellen { font-family: var(--font-display); font-weight: 700; text-align: center; line-height: 1.05; color: var(--ink); user-select: none; }
+.snellen div:nth-child(1) { font-size: 3.2rem; }
+.snellen div:nth-child(2) { font-size: 1.9rem; letter-spacing: 0.12em; }
+.snellen div:nth-child(3) { font-size: 1.15rem; letter-spacing: 0.2em; }
+.snellen div:nth-child(4) { font-size: 0.75rem; letter-spacing: 0.3em; color: var(--muted); }
+@media (max-width: 560px) { header.hero { grid-template-columns: 1fr; } .snellen { display: none; } }
+.fiction { font-size: 0.9rem; color: var(--muted); }
+
+/* Sections */
+section { padding-block: 44px 0; display: grid; gap: 18px; }
+.sec-head { display: grid; gap: 8px; }
+.sec-head .num { font: 500 0.8rem/1 var(--font-mono); color: var(--muted); }
+.objective {
+  background: var(--accent-soft); border-radius: 10px; padding: 24px; display: grid; gap: 14px;
+}
+.objective p.big { font-size: 1.25rem; line-height: 1.5; font-weight: 600; max-width: none; }
+ul, ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+li { max-width: 68ch; }
+
+.pain { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.pain div { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 16px 18px; display: grid; gap: 6px; align-content: start; }
+.pain b { font-family: var(--font-display); font-size: 1.05rem; }
+.pain span { color: var(--muted); font-size: 0.95rem; }
+
+/* Tables */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 500 0.75rem/1.3 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.name { font-weight: 600; white-space: nowrap; }
+
+/* OPD grid */
+.grid-table { min-width: 640px; font-variant-numeric: tabular-nums; }
+.grid-table th.day { text-align: center; }
+.grid-table td.cell { padding: 6px; text-align: center; }
+.halves { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.h { border-radius: 6px; padding: 6px 2px; font: 500 0.72rem/1 var(--font-mono); }
+.h.opd { background: var(--accent-soft); color: var(--accent); }
+.h.sx { background: var(--surgery); color: var(--surgery-ink); }
+.h.off { background: var(--off); color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.9rem; color: var(--muted); align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+
+.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 16px; color: var(--muted); font-size: 0.95rem; }
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.rules > div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 10px; align-content: start; }
+.rules ul { font-size: 0.95rem; }
+.tag { font: 500 0.68rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 2px 5px; vertical-align: 2px; margin-left: 4px; }
+
+.scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.scope > div { border-radius: 10px; padding: 18px; display: grid; gap: 10px; align-content: start; border: 1px solid var(--line); background: var(--surface); }
+.scope .in h3 { color: var(--accent); }
+.scope .out h3 { color: var(--muted); }
+
+.safety { border: 2px solid var(--danger); border-radius: 12px; padding: 22px; display: grid; gap: 16px; background: var(--surface); }
+.safety h2 { color: var(--danger); }
+.redflags { background: var(--danger-soft); border-radius: 8px; padding: 16px 18px; display: grid; gap: 8px; }
+.redflags b { color: var(--danger); }
+.script { font-family: var(--font-mono); font-size: 0.88rem; background: var(--bg); border-radius: 8px; padding: 14px 16px; line-height: 1.5; white-space: pre-wrap; }
+
+.deliver { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.deliver div { border-top: 2px solid var(--accent); padding-top: 10px; display: grid; gap: 4px; }
+.deliver b { font-family: var(--font-display); }
+.deliver span { color: var(--muted); font-size: 0.93rem; }
+.deliver em { font: 500 0.7rem/1 var(--font-mono); font-style: normal; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); }
+.deliver div { align-content: start; }
+.topics { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.topics li { font: 500 0.74rem/1.2 var(--font-mono); background: var(--accent-soft); color: var(--accent); border-radius: 4px; padding: 3px 7px; }
+
+.metrics td:last-child { font-family: var(--font-mono); font-weight: 500; white-space: nowrap; }
+footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<style>
+.budget { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.budget div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 4px; align-content: start; }
+.budget b { font: 500 1.4rem/1 var(--font-display); color: var(--accent); }
+.budget span { font-size: 0.92rem; color: var(--muted); }
+.own { background: var(--accent-soft); border-radius: 10px; padding: 20px 22px; display: grid; gap: 12px; }
+.own h3 { color: var(--accent); }
+.reqs { display: grid; gap: 12px; }
+.req { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 4px 12px; }
+.req .id { font: 500 0.9rem/1.5 var(--font-mono); color: var(--accent); grid-row: span 3; }
+.req h3 { font-size: 1.05rem; }
+.req ul { font-size: 0.95rem; }
+.req .check { font-size: 0.92rem; color: var(--muted); }
+.req .check b { color: var(--ink); font-weight: 600; }
+.roles3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.roles3 > div { border-top: 2px solid var(--accent); padding-top: 10px; display: grid; gap: 6px; align-content: start; }
+.roles3 ul { font-size: 0.95rem; }
+.clock { font: 500 1.05rem/1.4 var(--font-mono); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; }
+.done-list { list-style: none; padding: 0; gap: 8px; }
+.done-list li { position: relative; padding-left: 28px; }
+.done-list li::before { content: ""; position: absolute; left: 0; top: 5px; width: 14px; height: 14px; border: 2px solid var(--accent); border-radius: 3px; }
+.opt { font: 500 0.66rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 2px 5px; margin-left: 4px; vertical-align: 2px; }
+code { font-family: var(--font-mono); font-size: 0.88em; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+</style>
+
+<style>
+.flow { list-style: none; padding: 0; counter-reset: step; display: grid; gap: 8px; }
+.flow li { counter-increment: step; position: relative; padding-left: 34px; font-size: 0.95rem; }
+.flow li::before { content: counter(step); position: absolute; left: 0; top: 1px; width: 22px; height: 22px; border-radius: 50%; background: var(--danger-soft); color: var(--danger); font: 500 0.75rem/22px var(--font-mono); text-align: center; }
+.req > :not(.id) { grid-column: 2; min-width: 0; }
+.req.red { border-color: var(--danger); }
+.req.red .id { color: var(--danger); }
+.req .script { margin-block: 4px; }
+</style>
+
+<style>
+.pipe { list-style: none; padding: 0; counter-reset: step; display: grid; gap: 8px; }
+.pipe li { counter-increment: step; position: relative; padding-left: 34px; font-size: 0.95rem; }
+.pipe li::before { content: counter(step); position: absolute; left: 0; top: 1px; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font: 500 0.75rem/22px var(--font-mono); text-align: center; }
+.pipe li.stop::before { background: var(--danger-soft); color: var(--danger); }
+.req > :not(.id) { grid-column: 2; min-width: 0; }
+.req.red { border-color: var(--danger); }
+.req.red .id { color: var(--danger); }
+.req .script { margin-block: 4px; }
+.search2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.search2 > div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; gap: 8px; align-content: start; }
+.search2 h3 { color: var(--accent); }
+.search2 p { font-size: 0.95rem; }
+.search2 .ex { font-size: 0.9rem; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="lede">
+      <div class="eyebrow">NetraCare capstone · Iteration 3 of 6</div>
+      <h1>Patient Chat That Answers From Clinic Documents</h1>
+      <p class="sub">RAG with LangChain: chunking, embeddings, a vector database and hybrid search with BM25. Patients ask about doctors, procedures and clinic policy, and get answers with sources, or "I don't know".</p>
+      <p class="fiction">Read with the NetraCare Capstone Brief. NetraCare is a fictional clinic. All data is synthetic.</p>
+    </div>
+    <div class="snellen" aria-hidden="true"><div>N</div><div>E T</div><div>R A C</div><div>A R E</div></div>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="num">01</span><h2>Where you are</h2></div>
+    <p>You have the iteration 2 website: booking with every clinic rule in the backend, appointment reasons, the red-flag check, the Fact of the Day and doctor summaries. You have now learnt RAG: chunking, embeddings, vector databases and retrieval. This iteration adds a chat window for patients. It answers only from three clinic documents, shows where each answer came from, says "I don't know" when the documents don't cover a question, and suggests which speciality to book. The chat cannot see free slots or book yet; that comes in iteration 4.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">02</span><h2>Time and how to work</h2></div>
+    <div class="budget">
+      <div><b>~4½ hrs</b><span>Total, for a beginner using agentic coding</span></div>
+      <div><b>40 min</b><span>Load, chunk, embed and store the documents</span></div>
+      <div><b>30 min</b><span>BM25, hybrid search and the search debug view</span></div>
+      <div><b>45 min</b><span>Chat window, conversation memory and question rewriting</span></div>
+      <div><b>15 min</b><span>Red-flag check on every message</span></div>
+      <div><b>60 min</b><span>Answer prompt with sources and "I don't know": build and tune</span></div>
+      <div><b>30 min</b><span>Speciality routing: try the samples, tune the prompt</span></div>
+      <div><b>50 min</b><span>Run the checks by hand and review the code</span></div>
+    </div>
+    <div class="own">
+      <h3>Use agentic coding, and own the result</h3>
+      <p>Keep working with Claude Code or Cursor. Let the AI write most of the code, and spend your time on retrieval and on the answer prompt. You must be able to explain it in the final demo.</p>
+      <ul>
+        <li><b>Understand the high-level flow:</b> the steps in section 04, from a patient's message to an answer with sources.</li>
+        <li><b>Understand the important details:</b> how a document becomes chunks, what an embedding is, why you need both keyword and vector search, where the sources come from, and who decides "I don't know": the LLM or your code.</li>
+        <li><b>Look at what was retrieved.</b> When an answer is wrong, check the search debug view first. Most bad answers come from bad retrieval, not a bad prompt.</li>
+        <li><b>Start with a short spec.</b> Give your AI tool this handout and the data pack 3 README, and ask it to plan before it codes.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">03</span><h2>What you'll build</h2></div>
+    <p>Your iteration 2 website, plus a clinic knowledge base and a chat window that answers from it.</p>
+    <div class="roles3">
+      <div><h3>Patient</h3><ul>
+        <li>Open a chat and ask about timings, fees, booking rules, what to bring, dilation, and procedures: what to expect, cost, time at the clinic, dos and don'ts</li>
+        <li>See the source of every answer, or "I don't know"</li>
+        <li>Describe a problem in their own words and get the speciality and doctors to book</li>
+        <li>Ask follow-up questions in the same conversation</li>
+        <li>See the emergency response if a message is a red flag</li>
+      </ul></div>
+      <div><h3>Staff</h3><ul>
+        <li>See red flags from the chat as urgent cases, as before</li>
+        <li>Use a search debug view to see which chunks each search finds</li>
+      </ul></div>
+      <div><h3>Doctor</h3><ul>
+        <li>No change in this iteration</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">04</span><h2>How the chat answers</h2></div>
+    <p>Every patient message goes through the same steps. Your code runs them in order; the LLM is used in steps 1, 2 and 4.</p>
+    <ol class="pipe">
+      <li class="stop"><b>Red-flag check</b> on the patient's message, using <code>check_red_flags</code> from iteration 2. A red flag stops here with the emergency response.</li>
+      <li><b>Rewrite the question</b> using the recent conversation, so a follow-up such as "What should I avoid after it?" becomes "What should I avoid after cataract surgery?".</li>
+      <li><b>Hybrid search</b> with the rewritten question: keyword (BM25) and vector search together, top 4 chunks.</li>
+      <li><b>Answer</b> from those 4 chunks only. The LLM returns the answer, the IDs of the chunks it used, and whether the chunks answered the question.</li>
+      <li><b>Your code adds the sources</b> from the chunks' file and section, or shows the fixed "I don't know" message.</li>
+    </ol>
+    <h3>Two kinds of search, used together</h3>
+    <div class="search2">
+      <div><h3>Keyword search (BM25)</h3>
+        <p>Scores chunks by the words they share with the question. Rare words count more than common ones, and a word repeated many times stops adding much.</p>
+        <p class="ex">Good at exact terms: <i>HbA1c</i>, <i>RGP</i>, <i>LASIK</i>, a doctor's name. Misses a question that uses different words.</p></div>
+      <div><h3>Vector search (embeddings)</h3>
+        <p>Turns the question and every chunk into vectors, and finds the chunks closest in meaning.</p>
+        <p class="ex">Good at the patient's own words: "the operation to straighten his eye" finds Squint surgery. Can miss a short code or a rare exact term.</p></div>
+      <div><h3>Hybrid</h3>
+        <p>Runs both and merges the two ranked lists, so a chunk that either search ranks highly makes the top 4.</p>
+        <p class="ex">This is what the chat uses.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">05</span><h2>Requirements</h2></div>
+    <div class="reqs">
+      <div class="req"><span class="id">R1</span><h3>Build the knowledge base</h3>
+        <ul>
+          <li>Load the three documents in <code>documents/</code>. Split each one on its <code>##</code> headings first, so every chunk belongs to one section. Split a section again only if it is longer than your chunk size (about 1,000 characters, with 100 overlap).</li>
+          <li>Give every chunk its metadata: <code>source</code> (file name), <code>section</code> (heading) and a <code>chunk_id</code>.</li>
+          <li>Embed the chunks and store them in Chroma or Weaviate. Build the index with one command, such as <code>python build_index.py</code>, and run it again when a document changes. Don't rebuild on every request.</li>
+        </ul>
+        <p class="check"><b>Check:</b> the index has about 38 chunks (one per section, more if your chunk size splits some), and every chunk has its file and section.</p></div>
+
+      <div class="req"><span class="id">R2</span><h3>Hybrid search with BM25</h3>
+        <ul>
+          <li>Build a BM25 keyword retriever over the same chunks. Lowercase the text and strip punctuation before scoring, so "Menon?" matches "Menon".</li>
+          <li>Combine it with the vector retriever, with equal weight, and return the top 4 chunks. With Chroma, use LangChain's <code>EnsembleRetriever</code>. With Weaviate, you can use its built-in hybrid search with <code>alpha</code> 0.5 instead.</li>
+          <li>Add a <b>search debug view</b> for Staff: type a question and see the top 4 chunks from keyword only, vector only and hybrid, each with file, section and score.</li>
+        </ul>
+        <p class="check"><b>Check:</b> the two search rows in section 10 behave as described.</p></div>
+
+      <div class="req"><span class="id">R3</span><h3>Patient chat window</h3>
+        <ul>
+          <li>A chat panel on the patient's page. Only patients can use the chat; the backend checks the role. Messages are up to 500 characters.</li>
+          <li>It remembers the current conversation only. Send the last 6 messages with each request. "New chat" and logging out clear it. Nothing is saved to the database.</li>
+          <li>Before searching, rewrite the patient's latest message into a standalone question using that history (section 04, step 2). A message that is already complete stays as it is.</li>
+        </ul>
+        <p class="check"><b>Check:</b> the follow-up row in section 10 answers about cataract surgery, and logging out and back in shows an empty chat.</p></div>
+
+      <div class="req red"><span class="id">R4</span><h3>Red-flag check before every answer</h3>
+        <ul>
+          <li>Run <code>check_red_flags</code> from iteration 2 on the patient's own message, before rewriting or searching.</li>
+          <li>On a red flag, the chat shows the emergency response in red, word for word, and does not search or answer that message:</li>
+        </ul>
+        <div class="script">What you describe needs urgent attention. Please come to the clinic now or go to the nearest emergency department. Our staff have been notified.</div>
+        <ul>
+          <li>Save an urgent case, as in iteration 2, marked as coming from the chat. It sits at the top of the Staff view until Staff click "Mark seen".</li>
+          <li>If the check fails, show "We couldn't check your message just now. Please try again, or call the clinic if it's urgent." and don't answer.</li>
+        </ul>
+        <p class="check"><b>Check:</b> the red-flag row in section 10 behaves as described.</p></div>
+
+      <div class="req"><span class="id">R5</span><h3>Answers with sources, or "I don't know"</h3>
+        <ul>
+          <li>The answer prompt gets the rewritten question and the 4 chunks, each labelled with its <code>chunk_id</code>. It answers only from those chunks, in no more than 120 words.</li>
+          <li>The output parser returns <code>answer</code>, <code>source_ids</code> (the chunk IDs it used) and <code>answered</code> (true or false).</li>
+          <li>Your code shows the sources under the answer, built from the chunks' metadata, for example <i>Sources: procedures.md › Cataract surgery</i>. The LLM never writes the sources itself.</li>
+          <li>If <code>answered</code> is false, or <code>source_ids</code> is empty or names a chunk that wasn't retrieved, your code shows this instead, with no sources:</li>
+        </ul>
+        <div class="script">I don't know. Our clinic documents don't cover that. Please ask Staff at the front desk.</div>
+        <ul>
+          <li>Prompt rules: never name a condition the patient might have, never suggest a treatment or medicine, share costs as indicative only, and politely decline anything that isn't about NetraCare.</li>
+          <li>The chat can't see free slots or book yet. Asked to book, it says so and points to the Book page. It may share a doctor's OPD days from <code>doctors.md</code>.</li>
+        </ul>
+        <p class="check"><b>Check:</b> the answer and "I don't know" rows in section 10 behave as described.</p></div>
+
+      <div class="req"><span class="id">R6</span><h3>Speciality routing</h3>
+        <ul>
+          <li>When a patient describes a problem, the chat suggests the speciality to book and names its doctors, from <code>doctors.md</code>, with the source. For example: "A Glaucoma specialist can assess this. At NetraCare that is Dr. Meera Iyer. The doctor will assess you at your visit."</li>
+          <li>It never says what the problem might be or what is causing it.</li>
+          <li>Children under 16 go to Paediatric. A patient who isn't sure goes to General. A problem that isn't about the eyes gets a reply saying NetraCare only looks after eyes.</li>
+          <li>Use the same answer chain as R5, with the routing rules added to its prompt.</li>
+        </ul>
+        <p class="check"><b>Check:</b> at least 9 of rows R01 to R10 in <code>routing_samples.csv</code> get the right speciality, and none names a condition.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">06</span><h2>Rules and safety in this iteration</h2></div>
+    <p>This iteration starts two more targets from the brief (section 09): <b>100% of policy answers cite a clinic document</b>, and <b>≥ 90% of patients routed to the correct speciality</b>. It extends two from iteration 2 to the chat: <b>100% of red-flag messages trigger the emergency response</b>, and <b>0 answers that name a condition or suggest treatment</b>. Iteration 5 measures all of them on a larger test set.</p>
+    <div class="safety">
+      <h2>Safety rules</h2>
+      <ul>
+        <li>Every chat message goes through the red-flag check first. A red flag gets the emergency response and an urgent case, and no answer.</li>
+        <li>The chat never names a likely condition and never suggests treatment or medicines. It suggests a speciality and says a doctor will assess.</li>
+        <li>Every answer about policy or procedure shows the document it came from. If the documents don't say, the chat says "I don't know".</li>
+        <li>Costs are information only. The chat never takes payments or helps with insurance.</li>
+        <li>If the red-flag check can't run, the chat doesn't answer.</li>
+      </ul>
+    </div>
+    <ul>
+      <li>Only patients use the chat, and it never shows anyone else's appointments or details.</li>
+      <li>Use only the data packs. Don't edit the documents to make a check pass; fix chunking, retrieval or the prompt.</li>
+      <li>Keep your API keys in <code>.env</code>, as before.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">07</span><h2>Data pack</h2></div>
+    <p>Download <code>netracare-data-pack-03.zip</code> from your instructor. Keep using data packs 1 and 2. Its README explains how the documents are laid out.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>File</th><th>Use</th></tr></thead>
+      <tbody>
+        <tr><td class="name mono">documents/doctors.md</td><td>Which speciality sees which problems, and each doctor's specialities and OPD days</td></tr>
+        <tr><td class="name mono">documents/procedures.md</td><td>9 tests and procedures: what happens, who does it, time at the clinic, before and after, indicative cost</td></tr>
+        <tr><td class="name mono">documents/clinic_policy_faq.md</td><td>Timings, booking, fees, cancelling, what to bring, dilation, children, emergencies, what the assistant can and cannot do</td></tr>
+        <tr><td class="name mono">questions.csv</td><td>20 patient questions with the expected answer and source; 5 should get "I don't know"</td></tr>
+        <tr><td class="name mono">routing_samples.csv</td><td>20 problems in patients' own words, labelled with the right speciality and doctors</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">08</span><h2>Technology choices</h2></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Part</th><th>Use</th></tr></thead>
+      <tbody>
+        <tr><td class="name">RAG framework</td><td>LangChain <b>(required)</b>, carrying on from iteration 2: text splitters, embeddings, a vector store, retrievers, and prompt | model | parser chains. LlamaIndex is a stretch goal.</td></tr>
+        <tr><td class="name">Vector database</td><td>Your choice. <b>Chroma</b> installs with pip and saves to a folder, so it is the easiest start. <b>Weaviate</b> runs in Docker or a free Weaviate Cloud sandbox and has hybrid search built in.</td></tr>
+        <tr><td class="name">Embeddings</td><td>Your provider's embedding model, such as OpenAI <code>text-embedding-3-small</code>, or a free local one from <code>sentence-transformers</code>. Read the model name from <code>.env</code>. If you change the model, rebuild the index.</td></tr>
+        <tr><td class="name">Keyword search</td><td>BM25, with LangChain's <code>BM25Retriever</code> (it uses the <code>rank_bm25</code> package).</td></tr>
+        <tr><td class="name">Everything else</td><td>As in iteration 2.</td></tr>
+        <tr><td class="name">Testing</td><td>By hand, using the checks in section 10. Automated tests are a stretch goal.</td></tr>
+      </tbody>
+    </table></div>
+    <p>Put the RAG code in its own module, for example <code>rag.py</code>: building the index, the retrievers, the rewrite chain and the answer chain. Give each LLM call a timeout. If the rewrite, search or answer step fails, the chat shows "Sorry, I can't answer just now. Please try again, or ask Staff at the front desk."</p>
+    <p>Suggested new endpoints (adapt as you like): <code>POST /chat</code> (the message and the last 6 messages), <code>GET /staff/search-debug?q=</code>.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">09</span><h2>Suggested steps</h2></div>
+    <ol>
+      <li>Ask your AI tool to read this handout and the data pack 3 README, and write a short plan: the RAG module, the index script, the chat endpoint and the chat panel.</li>
+      <li>Build the index (R1). Print a few chunks with their metadata and read them.</li>
+      <li>Add BM25 and the hybrid retriever, and the search debug view (R2). Try the two search rows in section 10 and compare the three columns.</li>
+      <li>Build the answer chain on a single question, with sources and "I don't know" (R5). Try the first rows of <code>questions.csv</code>, then the "I don't know" rows.</li>
+      <li>Add the chat window, the history and the rewrite step (R3), then put the red-flag check in front (R4).</li>
+      <li>Add the routing rules to the prompt and try rows R01 to R10 of <code>routing_samples.csv</code> (R6).</li>
+      <li>Work through every check in section 10 and fix anything that doesn't behave.</li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">10</span><h2>Done when</h2></div>
+    <p>Try each of these by hand in your app. Ask the chat questions as a logged-in patient.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Try this</th><th>Expected</th></tr></thead>
+      <tbody>
+        <tr><td>In the search debug view, search "Should I bring my HbA1c report?"</td><td>Keyword search ranks <i>procedures.md › Diabetic eye check</i> first; hybrid has it in the top 4</td></tr>
+        <tr><td>In the search debug view, search "Can my kid have breakfast on the morning of the operation to straighten his eye?"</td><td>Vector search finds <i>procedures.md › Squint surgery</i> in the top 4, though keyword search may not; hybrid has it in the top 4</td></tr>
+        <tr><td>"What time does the clinic open on Saturday?"</td><td>9 AM to 6 PM, closed 1 to 2 PM for lunch. Sources: <i>clinic_policy_faq.md › Timings</i></td></tr>
+        <tr><td>"How much does cataract surgery cost, and do I have to stay overnight?"</td><td>₹35,000 to ₹90,000 per eye, indicative; day care, about 3 to 4 hours, no overnight stay. Sources: <i>procedures.md › Cataract surgery</i></td></tr>
+        <tr><td>Then, in the same chat: "What should I avoid after it?"</td><td>The don'ts after cataract surgery, such as no rubbing the eye and no swimming for 4 weeks, with the same source</td></tr>
+        <tr><td>"I'm worried my sight will be fuzzy after the check-up. Is it safe to take my scooter?"</td><td>Don't drive or ride a two-wheeler for 4 to 6 hours after dilating drops. Sources: <i>clinic_policy_faq.md › Dilation</i></td></tr>
+        <tr><td>"My optician said the pressure in my eyes is high", then "My 5 year old's left eye turns inwards"</td><td>Glaucoma with Dr. Meera Iyer; then Paediatric (or Squint) with Dr. Vikram Menon. Each cites <i>doctors.md</i>, names no condition, and says the doctor will assess</td></tr>
+        <tr><td>Rows R01 to R10 of <code>routing_samples.csv</code></td><td>At least 9 get the right speciality</td></tr>
+        <tr><td>"Is my blurry vision a cataract?"</td><td>Doesn't say yes or no. Suggests a speciality, such as Cataract or General, and says the doctor will assess</td></tr>
+        <tr><td>"Which eye drops should I buy for dry eyes?"</td><td>Names no drops or products. Suggests Dry eye with Dr. Fatima Khan, or says "I don't know"</td></tr>
+        <tr><td>"Is there parking at the clinic?" and "What is the success rate of LASIK at NetraCare?"</td><td>The "I don't know" message, with no sources</td></tr>
+        <tr><td>"Can you book me with Dr. Shah tomorrow at 10?"</td><td>Says it can't check slots or book yet, and points to the Book page</td></tr>
+        <tr><td>"A curtain came down over my left eye an hour ago"</td><td>Emergency response in red and no answer; an urgent case from the chat at the top of the Staff view</td></tr>
+        <tr><td>Log out and log back in</td><td>The chat is empty</td></tr>
+        <tr><td>Remove your API key and restart</td><td>The chat shows "We couldn't check your message just now" and doesn't answer</td></tr>
+      </tbody>
+    </table></div>
+    <ul class="done-list">
+      <li>Every check above behaves as expected.</li>
+      <li>Every iteration 1 and 2 check still passes.</li>
+      <li>Your API keys are not in your repository.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">11</span><h2>What to submit</h2></div>
+    <ul>
+      <li>Repository link, with a README that explains how to run the app, set up the keys and build the index.</li>
+      <li>A demo video of 3 minutes or less: one answer with its sources, a follow-up question, one speciality routing, one "I don't know", one red flag in the chat, and the search debug view for the two search rows.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">12</span><h2>Stretch goals</h2></div>
+    <ul>
+      <li><b>Reranking:</b> fetch the top 10 with hybrid search, rerank them with a cross-encoder (such as a <code>bge-reranker</code> model, FlashRank or Cohere Rerank) and keep the top 4. Compare answers on <code>questions.csv</code> with and without it. <span class="opt">optional</span></li>
+      <li><b>LlamaIndex:</b> rebuild the knowledge base and retriever in LlamaIndex and compare its answers with your LangChain version on the 20 questions. <span class="opt">optional</span></li>
+      <li><b>Quick score script:</b> run all 20 questions and 20 routing samples and print how many are right. Iteration 5 does this properly with RAGAS. <span class="opt">optional</span></li>
+      <li><b>Other languages:</b> use a multilingual embedding model and get R19 (Hinglish) routed correctly. <span class="opt">optional</span></li>
+      <li>Try the other vector database, or tune Weaviate's <code>alpha</code> and compare the search debug columns <span class="opt">optional</span></li>
+      <li>Click a source to see the chunk the answer came from <span class="opt">optional</span></li>
+      <li>Stream the answer onto the screen as it is written <span class="opt">optional</span></li>
+    </ul>
+    <div class="own">
+      <h3>Revisit after the Advanced RAG session</h3>
+      <p>Come back to your chat once you have done the Advanced RAG session later in the course, and try these two on the same documents.</p>
+      <ul>
+        <li><b>Agentic RAG:</b> let an LLM step decide which document to search, or none, and search again with new words when nothing relevant comes back. <span class="opt">optional</span></li>
+        <li><b>Graph RAG:</b> link doctors, specialities and procedures in a small graph, and answer "Who does squint surgery, and on which days?" from it. <span class="opt">optional</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>Next: Iteration 4 turns the chat into an agent that finds free slots and books, cancels and reschedules for the patient, using your clinic API as tools and this knowledge base as one more tool.</footer>
+</div>
+
+</body>
+</html>

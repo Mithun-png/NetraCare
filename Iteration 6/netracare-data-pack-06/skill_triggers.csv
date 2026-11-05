@@ -1,0 +1,17 @@
+trigger_id,patient_id,message,expected_skill,also_acceptable,note
+T01,P01,I'm having my cataract operation on Monday. Can I have breakfast that morning?,cataract-surgery-care,,
+T02,P14,It's 3 days since my cataract surgery. Can I wash my hair?,cataract-surgery-care,,Needs the post-op guide file
+T03,P18,Can I watch TV and read the paper after cataract surgery?,cataract-surgery-care,,
+T04,P11,I'm tired of my glasses and want to get LASIK done,lasik-suitability-intake,,
+T05,P20,Am I suitable for laser eye surgery?,lasik-suitability-intake,,Must not answer yes or no
+T06,P16,How much does LASIK cost?,none,lasik-suitability-intake,A plain cost question is answered from procedures.md. Don't start the questions unless the patient wants them
+T07,P01,What do I need to bring to my appointment?,prepare-for-visit,,Log in as a patient with a booked appointment
+T08,P03,Is there anything I should do before my glaucoma appointment?,prepare-for-visit,,Log in as a patient with a booked Glaucoma appointment
+T09,P07,My teacher says I can't see the board properly. Can I get my eyes checked?,children-visit,,The skill you write. P07 was born in 2017
+T10,P12,I want to book an eye test,children-visit,,P12 was born in 2019
+T11,P19,My daughter is 6 and sits very close to the TV. Which doctor should she see?,children-visit,,Adult patient asking about a child
+T12,P02,What time do you open on Saturday?,none,,Answered from clinic_policy_faq.md
+T13,P05,Book me with Dr. Khan next Tuesday for dry eyes,none,,Booking tools from iteration 4
+T14,P06,Cancel my appointment please,none,,Booking tools from iteration 4
+T15,P04,Is my blurred vision a cataract?,none,,Routing only. Names no condition
+T16,P09,Since this morning I can't see anything from my left eye after my cataract surgery,none,,Red flag. Emergency response first; no skill and no answer

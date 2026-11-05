@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetraCare Capstone Brief</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single reading column of numbered brief sections, with a wide weekly OPD grid as the one visual anchor. */
+:root {
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --ink: #14212b;
+  --muted: #55636e;
+  --line: #d8e0e6;
+  --accent: #0d6e7a;
+  --accent-soft: #e2f1f2;
+  --surgery: #f4e6d4;
+  --surgery-ink: #7a4a12;
+  --off: #eef1f4;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171d; --surface: #16212a; --ink: #e4ebf0; --muted: #9aa9b4; --line: #2a3a46;
+    --accent: #5cc3cd; --accent-soft: #143238; --surgery: #3a2a17; --surgery-ink: #f0c48a;
+    --off: #1b262e; --danger: #f2877c; --danger-soft: #3a1b18; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171d; --surface: #16212a; --ink: #e4ebf0; --muted: #9aa9b4; --line: #2a3a46;
+  --accent: #5cc3cd; --accent-soft: #143238; --surgery: #3a2a17; --surgery-ink: #f0c48a;
+  --off: #1b262e; --danger: #f2877c; --danger-soft: #3a1b18; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 400 17px/1.6 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 64px;
+}
+.wrap { max-width: 860px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.6rem; font-weight: 700; }
+h3 { font-size: 1.1rem; font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); }
+.eyebrow { font: 500 0.78rem/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.mono { font-family: var(--font-mono); font-size: 0.92em; font-variant-numeric: tabular-nums; }
+
+/* Hero */
+header.hero { padding-block: 56px 40px; border-bottom: 1px solid var(--line); display: grid; gap: 28px; grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+.hero .lede { display: grid; gap: 16px; min-width: 0; }
+.hero .sub { font-size: 1.2rem; color: var(--muted); }
+.snellen { font-family: var(--font-display); font-weight: 700; text-align: center; line-height: 1.05; color: var(--ink); user-select: none; }
+.snellen div:nth-child(1) { font-size: 3.2rem; }
+.snellen div:nth-child(2) { font-size: 1.9rem; letter-spacing: 0.12em; }
+.snellen div:nth-child(3) { font-size: 1.15rem; letter-spacing: 0.2em; }
+.snellen div:nth-child(4) { font-size: 0.75rem; letter-spacing: 0.3em; color: var(--muted); }
+@media (max-width: 560px) { header.hero { grid-template-columns: 1fr; } .snellen { display: none; } }
+.fiction { font-size: 0.9rem; color: var(--muted); }
+
+/* Sections */
+section { padding-block: 44px 0; display: grid; gap: 18px; }
+.sec-head { display: grid; gap: 8px; }
+.sec-head .num { font: 500 0.8rem/1 var(--font-mono); color: var(--muted); }
+.objective {
+  background: var(--accent-soft); border-radius: 10px; padding: 24px; display: grid; gap: 14px;
+}
+.objective p.big { font-size: 1.25rem; line-height: 1.5; font-weight: 600; max-width: none; }
+ul, ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+li { max-width: 68ch; }
+
+.pain { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.pain div { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 16px 18px; display: grid; gap: 6px; align-content: start; }
+.pain b { font-family: var(--font-display); font-size: 1.05rem; }
+.pain span { color: var(--muted); font-size: 0.95rem; }
+
+/* Tables */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 500 0.75rem/1.3 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.name { font-weight: 600; white-space: nowrap; }
+
+/* OPD grid */
+.grid-table { min-width: 640px; font-variant-numeric: tabular-nums; }
+.grid-table th.day { text-align: center; }
+.grid-table td.cell { padding: 6px; text-align: center; }
+.halves { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.h { border-radius: 6px; padding: 6px 2px; font: 500 0.72rem/1 var(--font-mono); }
+.h.opd { background: var(--accent-soft); color: var(--accent); }
+.h.sx { background: var(--surgery); color: var(--surgery-ink); }
+.h.off { background: var(--off); color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.9rem; color: var(--muted); align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+
+.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 16px; color: var(--muted); font-size: 0.95rem; }
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.rules > div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 10px; align-content: start; }
+.rules ul { font-size: 0.95rem; }
+.tag { font: 500 0.68rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 2px 5px; vertical-align: 2px; margin-left: 4px; }
+
+.scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.scope > div { border-radius: 10px; padding: 18px; display: grid; gap: 10px; align-content: start; border: 1px solid var(--line); background: var(--surface); }
+.scope .in h3 { color: var(--accent); }
+.scope .out h3 { color: var(--muted); }
+
+.safety { border: 2px solid var(--danger); border-radius: 12px; padding: 22px; display: grid; gap: 16px; background: var(--surface); }
+.safety h2 { color: var(--danger); }
+.redflags { background: var(--danger-soft); border-radius: 8px; padding: 16px 18px; display: grid; gap: 8px; }
+.redflags b { color: var(--danger); }
+.script { font-family: var(--font-mono); font-size: 0.88rem; background: var(--bg); border-radius: 8px; padding: 14px 16px; line-height: 1.5; white-space: pre-wrap; }
+
+.deliver { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.deliver div { border-top: 2px solid var(--accent); padding-top: 10px; display: grid; gap: 4px; }
+.deliver b { font-family: var(--font-display); }
+.deliver span { color: var(--muted); font-size: 0.93rem; }
+.deliver em { font: 500 0.7rem/1 var(--font-mono); font-style: normal; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); }
+.deliver div { align-content: start; }
+.topics { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.topics li { font: 500 0.74rem/1.2 var(--font-mono); background: var(--accent-soft); color: var(--accent); border-radius: 4px; padding: 3px 7px; }
+
+.metrics td:last-child { font-family: var(--font-mono); font-weight: 500; white-space: nowrap; }
+footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="lede">
+      <div class="eyebrow">Agentic AI Course · Capstone project</div>
+      <h1>NetraCare Eye Clinic: AI Front Desk</h1>
+      <p class="sub">One project you build step by step across the whole course.</p>
+      <p class="fiction">NetraCare is a fictional clinic. All doctors, patients and data in this project are synthetic.</p>
+    </div>
+    <div class="snellen" aria-hidden="true">
+      <div>N</div><div>E T</div><div>R A C</div><div>A R E</div>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="num">01</span><h2>Project objective</h2></div>
+    <div class="objective">
+      <p class="big">Build an AI front desk for NetraCare that answers patient questions, routes each patient to the right specialist and manages appointments, while keeping staff in control and never giving medical advice.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">02</span><h2>The problem today</h2></div>
+    <p>NetraCare has 5 doctors. Its front desk staff handle every call, walk-in and message themselves.</p>
+    <div class="pain">
+      <div><b>Patients wait on hold</b><span>Most calls are the same questions: timings, fees, what to bring, how long dilation lasts.</span></div>
+      <div><b>Wrong specialist</b><span>Patients describe symptoms in their own words and get booked with a doctor who then refers them on.</span></div>
+      <div><b>Slots go to waste</b><span>Patients who can't come rarely call to cancel, so their slot sits empty.</span></div>
+      <div><b>Staff are the bottleneck</b><span>Every booking, change and cancellation goes through the front desk.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">03</span><h2>The clinic</h2></div>
+    <p>Open <b>Monday to Saturday, 9 AM to 6 PM</b>, closed for lunch <b>1 to 2 PM</b>, closed Sundays and listed holidays. The day has two sessions: <span class="mono">AM 09:00–13:00</span> and <span class="mono">PM 14:00–18:00</span>.</p>
+
+    <h3>Doctors</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Doctor</th><th>Specialities</th></tr></thead>
+        <tbody>
+          <tr><td class="name">Dr. Anand Rao</td><td>Cataract, General</td></tr>
+          <tr><td class="name">Dr. Meera Iyer</td><td>Glaucoma, Cataract</td></tr>
+          <tr><td class="name">Dr. Kiran Shah</td><td>Retina (diabetic eye, AMD), General</td></tr>
+          <tr><td class="name">Dr. Fatima Khan</td><td>Cornea, Refractive (LASIK), Dry eye</td></tr>
+          <tr><td class="name">Dr. Vikram Menon</td><td>Paediatric, Squint, General</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Weekly OPD schedule</h3>
+    <div class="table-wrap">
+      <table class="grid-table">
+        <thead><tr><th>Doctor</th><th class="day">Mon</th><th class="day">Tue</th><th class="day">Wed</th><th class="day">Thu</th><th class="day">Fri</th><th class="day">Sat</th></tr></thead>
+        <tbody>
+          <tr><td class="name">Dr. Rao</td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td>
+            <td class="cell"><div class="halves"><span class="h sx">SX</span><span class="h opd">PM</span></div></td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td></tr>
+          <tr><td class="name">Dr. Iyer</td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td>
+            <td class="cell"><div class="halves"><span class="h sx">SX</span><span class="h sx">SX</span></div></td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td>
+            <td class="cell"><div class="halves"><span class="h off">off</span><span class="h off">off</span></div></td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td></tr>
+          <tr><td class="name">Dr. Shah</td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h sx">SX</span></div></td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td>
+            <td class="cell"><div class="halves"><span class="h off">off</span><span class="h off">off</span></div></td></tr>
+          <tr><td class="name">Dr. Khan</td>
+            <td class="cell"><div class="halves"><span class="h sx">SX</span><span class="h sx">SX</span></div></td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td></tr>
+          <tr><td class="name">Dr. Menon</td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td>
+            <td class="cell"><div class="halves"><span class="h off">off</span><span class="h off">off</span></div></td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td>
+            <td class="cell"><div class="halves"><span class="h off">off</span><span class="h off">off</span></div></td>
+            <td class="cell"><div class="halves"><span class="h opd">AM</span><span class="h opd">PM</span></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--accent-soft)"></i>OPD, bookable</span>
+      <span><i style="background:var(--surgery)"></i>SX, surgery, not bookable</span>
+      <span><i style="background:var(--off)"></i>Not at the clinic</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">04</span><h2>Rules the system must enforce</h2></div>
+    <p>Every booking must follow these rules.</p>
+    <div class="rules">
+      <div>
+        <h3>Slots</h3>
+        <ul>
+          <li>New consultation: <span class="mono">20 min</span>. Follow-up: <span class="mono">10 min</span>.</li>
+          <li>No slots from 1 to 2 PM, on Sundays, on listed holidays, or in a surgery session.</li>
+          <li>An appointment must finish by 1 PM (AM session) or 6 PM (PM session).</li>
+          <li>No double-booking a slot.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Booking</h3>
+        <ul>
+          <li>Bookings open up to 30 days ahead.</li>
+          <li>One active booking per patient per speciality.</li>
+          <li>A follow-up is booked with the doctor who saw the patient.</li>
+          <li>Patients are identified by mobile number and name.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Cancel and reschedule</h3>
+        <ul>
+          <li>Patients can cancel until 2 hours before the appointment.</li>
+          <li>A reschedule counts as cancel plus new booking, so the same 2-hour cut-off applies.</li>
+          <li>Inside 2 hours, the request goes to staff.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Doctor leave</h3>
+        <ul>
+          <li>Leave cancels the affected slots.</li>
+          <li>Each affected patient is offered the next slot with the same or an overlapping specialist.</li>
+          <li>If no other doctor covers the speciality, offer the same doctor's next free slot.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>No slot available</h3>
+        <ul>
+          <li>If no suitable slot is free within the 30-day window, say so clearly.</li>
+          <li>A cancelled slot becomes free for anyone to book.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">05</span><h2>Who uses it</h2></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Role</th><th>Can do</th></tr></thead>
+        <tbody>
+          <tr><td class="name">Patient</td><td>Ask questions, describe symptoms, book, reschedule and cancel their own appointments.</td></tr>
+          <tr><td class="name">Staff</td><td>Everything a patient can, for any patient. Book walk-ins, override rules and approve flagged actions. Manage doctors and holidays. See reports.</td></tr>
+          <tr><td class="name">Doctor</td><td>See their own schedule and patient intake notes. Mark leave.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">06</span><h2>Scope</h2></div>
+    <div class="scope">
+      <div class="in">
+        <h3>In scope</h3>
+        <ul>
+          <li>Enquiries and FAQs</li>
+          <li>Speciality routing from symptoms</li>
+          <li>Booking, rescheduling, cancelling</li>
+          <li>Staff dashboard</li>
+          <li>Intake summaries for doctors</li>
+          <li>Booking access for partner apps</li>
+        </ul>
+      </div>
+      <div class="out">
+        <h3>Out of scope</h3>
+        <ul>
+          <li>Diagnosis or treatment advice</li>
+          <li>Reading eye images or reports</li>
+          <li>Prescriptions</li>
+          <li>Billing and payments</li>
+          <li>Insurance claims</li>
+          <li>Pharmacy and inventory</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="safety">
+      <div class="sec-head"><span class="num">07</span><h2>Safety rules (non-negotiable)</h2></div>
+      <ol>
+        <li><b>Never name a likely condition or suggest treatment.</b> Route to a speciality and say a doctor will assess.</li>
+        <li><b>Red-flag symptoms always get the emergency response before any booking, and appear as urgent on the staff dashboard.</b></li>
+        <li><b>Every answer about policy or procedure cites the clinic document it came from.</b> If the documents don't say, the assistant says it doesn't know.</li>
+        <li><b>Patients only ever see their own appointments and details.</b></li>
+        <li><b>Use only the synthetic data provided.</b> No real patient information, ever.</li>
+      </ol>
+      <div class="redflags">
+        <b>Examples of red-flag symptoms</b>
+        <ul>
+          <li>Sudden loss of vision, in one or both eyes</li>
+          <li>A curtain or shadow moving across the vision</li>
+          <li>A sudden shower of new floaters or flashes of light</li>
+          <li>Chemical splash or any injury to the eye</li>
+          <li>Severe eye pain with headache, nausea or haloes around lights</li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="margin-bottom:8px">Example emergency response</h3>
+        <div class="script">What you describe needs urgent attention. Please come to the clinic now or go to the nearest emergency department. Our staff have been notified.</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">08</span><h2>What you will have at the end</h2></div>
+    <p>By the final demo, your NetraCare includes these parts. Each lists the course topics you apply to build it.</p>
+    <div class="deliver">
+      <div><b>Clinic API</b> <em>Tools</em><span>Doctors, slots and appointments, with every rule enforced. Your agents call these as tools.</span><ul class="topics" aria-label="Topics applied"><li>Python</li><li>OOP</li><li>FastAPI</li><li>Pydantic</li><li>Tool calling</li></ul></div>
+      <div><b>Clinic MCP server</b> <em>Partner access</em><span>Exposes the core clinic APIs so partner apps, such as health aggregators, can book NetraCare from their own agents.</span><ul class="topics" aria-label="Topics applied"><li>MCP</li></ul></div>
+      <div><b>Patient assistant</b> <em>Core agent</em><span>Chat that answers questions, routes patients, writes intake summaries for doctors and books appointments.</span><ul class="topics" aria-label="Topics applied"><li>LLM APIs</li><li>Prompt engineering</li><li>Agents: tools, memory, planning</li><li>LangGraph</li><li>Human-in-the-loop</li><li>Skills</li><li>Voice</li><li>Multimodal</li></ul></div>
+      <div><b>Clinic knowledge base</b> <em>RAG</em><span>Clinic policies and patient guides the assistant answers from, with citations.</span><ul class="topics" aria-label="Topics applied"><li>Embeddings</li><li>Vector DB</li><li>Chunking</li><li>Reranking</li><li>LlamaIndex</li><li>Graph RAG</li><li>Agentic RAG</li></ul></div>
+      <div><b>Staff dashboard</b><span>Each doctor's day, urgent cases, approvals, overrides and rebooking patients when a doctor is on leave.</span><ul class="topics" aria-label="Topics applied"><li>Streamlit</li><li>Async</li><li>Human-in-the-loop</li></ul></div>
+      <div><b>Proof of quality</b> <em>Evals and observability</em><span>Test results that prove the targets below, and a dashboard to monitor the live system.</span><ul class="topics" aria-label="Topics applied"><li>RAGAS</li><li>Offline and online evals</li><li>LangSmith</li><li>Opik</li></ul></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">09</span><h2>How we will judge success</h2></div>
+    <div class="table-wrap">
+      <table class="metrics">
+        <thead><tr><th>Measure</th><th>Target</th></tr></thead>
+        <tbody>
+          <tr><td>Red-flag messages that trigger the emergency response</td><td>100%</td></tr>
+          <tr><td>Patients routed to the correct speciality (test set)</td><td>≥ 90%</td></tr>
+          <tr><td>Bookings that break a clinic rule</td><td>0</td></tr>
+          <tr><td>Policy answers that cite a clinic document</td><td>100%</td></tr>
+          <tr><td>Answers that name a condition or suggest treatment</td><td>0</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The final demo walks through a set of standard patient scenarios, shared closer to the end of the course.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">10</span><h2>How this brief works</h2></div>
+    <div class="objective">
+      <p>This page is the overall brief. It describes the whole project and does not list everything you need to build.</p>
+      <p>After each module, you will receive detailed requirements for the capabilities to build next, using the topic you have just learnt. Each set of requirements adds to your NetraCare from the previous module, so the project grows step by step until the final demo.</p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

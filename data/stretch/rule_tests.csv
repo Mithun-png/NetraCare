@@ -1,0 +1,39 @@
+test_id,action,role,acting_patient_id,appointment_id,doctor_id,speciality,visit_type,date,start_time,expected,reason_code,note
+T01,book,patient,P17,,D1,Cataract,new,2026-11-04,09:00,allowed,,"Normal booking, Wed AM OPD"
+T02,book,patient,P17,,D1,Cataract,new,2026-11-03,09:00,refused,DOUBLE_BOOKED,Same start as A101
+T03,book,patient,P17,,D1,Cataract,new,2026-11-03,09:10,refused,DOUBLE_BOOKED,Overlaps A101 (09:00-09:20)
+T04,book,patient,P17,,D1,General,new,2026-11-03,10:00,allowed,,"A090 was cancelled, so the slot is free"
+T05,book,patient,P17,,D1,Cataract,new,2026-11-05,10:00,refused,SURGERY_SESSION,Dr. Rao operates Thu AM
+T06,book,patient,P17,,D2,Glaucoma,new,2026-11-05,10:00,refused,DOCTOR_OFF,Dr. Iyer is off on Thursdays
+T07,book,patient,P17,,D3,Retina,new,2026-11-08,10:00,refused,CLINIC_CLOSED,Sunday
+T08,book,patient,P17,,D3,Retina,new,2026-11-09,10:00,refused,HOLIDAY,Listed holiday
+T09,book,patient,P17,,D1,General,new,2026-11-03,13:00,refused,OUTSIDE_SESSION,Lunch break
+T10,book,patient,P17,,D1,General,new,2026-11-03,12:50,refused,ENDS_AFTER_SESSION,20 min would end at 13:10
+T11,book,patient,P17,,D1,General,new,2026-11-03,12:40,allowed,,Ends exactly at 13:00
+T12,book,patient,P17,,D1,General,new,2026-11-03,17:40,allowed,,Ends exactly at 18:00
+T13,book,patient,P17,,D1,General,new,2026-11-03,17:50,refused,ENDS_AFTER_SESSION,20 min would end at 18:10
+T14,book,patient,P17,,D1,General,new,2026-11-03,08:40,refused,OUTSIDE_SESSION,Before 9 AM
+T15,book,patient,P17,,D1,General,new,2026-11-03,09:05,refused,INVALID_START_TIME,Starts must be on 10-minute marks
+T16,book,patient,P17,,D3,Retina,new,2026-12-02,10:00,allowed,,Exactly 30 days ahead
+T17,book,patient,P17,,D3,Retina,new,2026-12-03,10:00,refused,BEYOND_30_DAYS,31 days ahead
+T18,book,patient,P17,,D3,Retina,new,2026-11-02,09:00,refused,IN_PAST,Clinic time is 10:00
+T19,book,patient,P17,,D4,Glaucoma,new,2026-11-04,10:00,refused,SPECIALITY_MISMATCH,Dr. Khan does not cover Glaucoma
+T20,book,patient,P01,,D2,Cataract,new,2026-11-04,11:00,refused,ACTIVE_BOOKING_EXISTS,P01 already has A101 for Cataract
+T21,book,patient,P01,,D3,Retina,new,2026-11-04,11:00,allowed,,Different speciality is fine
+T22,book,patient,P13,,D3,Retina,follow_up,2026-11-04,11:30,allowed,,"Follow-up with Dr. Shah, who saw P13 (A003); 10 min"
+T23,book,patient,P18,,D2,Cataract,follow_up,2026-11-04,11:00,refused,FOLLOW_UP_DIFFERENT_DOCTOR,P18 was seen by Dr. Rao (A006)
+T24,book,patient,P18,,D1,Cataract,follow_up,2026-11-04,09:20,allowed,,Follow-up with the doctor who saw P18
+T25,book,patient,P17,,D1,General,follow_up,2026-11-04,10:00,refused,NO_PREVIOUS_VISIT,P17 has never been seen
+T26,book,patient,P19,,D2,Cataract,new,2026-11-06,12:40,refused,DOUBLE_BOOKED,A108 holds 12:40-13:00
+T27,book,patient,P19,,D2,Cataract,new,2026-11-06,12:20,allowed,,"Ends 12:40, right before A108"
+T28,book,patient,P17,,D5,Paediatric,new,2026-11-04,10:00,refused,DOCTOR_OFF,Dr. Menon is off on Wednesdays
+T29,book,patient,P17,,D3,Retina,new,2026-11-04,14:00,refused,SURGERY_SESSION,Dr. Shah operates Wed PM
+T30,book,staff,P20,,D1,General,new,2026-11-04,10:00,allowed,,Staff books a walk-in for P20
+T31,cancel,patient,P04,A104,,,,,,allowed,,12:30 today is 2.5 hours away
+T32,cancel,patient,P03,A103,,,,,,to_staff,INSIDE_2_HOURS,11:00 today is 1 hour away; goes to Staff
+T33,cancel,staff,,A103,,,,,,allowed,,Staff can cancel inside 2 hours
+T34,cancel,patient,P06,A105,,,,,,refused,NOT_YOUR_APPOINTMENT,A105 belongs to P05
+T35,cancel,patient,P01,A001,,,,,,refused,NOT_ACTIVE,A001 is already completed
+T36,reschedule,patient,P05,A105,D2,Glaucoma,new,2026-11-06,10:00,allowed,,"Old slot freed, new one booked"
+T37,reschedule,patient,P03,A103,D3,Retina,new,2026-11-04,10:00,to_staff,INSIDE_2_HOURS,"Reschedule = cancel + book, so the 2-hour rule applies"
+T38,reschedule,patient,P05,A105,D2,Glaucoma,new,2026-11-05,10:00,refused,DOCTOR_OFF,Refused; A105 stays as it was

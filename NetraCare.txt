@@ -1,0 +1,18 @@
+NetraCare is a fictional eye clinic with 5 doctors, busy front desks and patients who get routed to the wrong specialist. You’ll build an AI front desk and care coordination system that answers questions, routes patients to the right doctor, manages appointments and keeps staff in control, without ever giving medical advice.
+
+🧩 How it works: for each module you’ll get an Iteration handout with the next set of features to build using what youhave learnt. There are 6 iterations, and by the end you’ll have one complete agentic application for your portfolio.
+
+🗺️ The 6 iterations
+Clinic website: logins, booking, cancel, role dashboards
+↳ Python, FastAPI, Streamlit/React, agentic coding
+First LLM features: eye fact banner, visit summary, red flags
+↳ LLM APIs, prompting, LangChain classifier
+Patient chat: answers on doctors, procedures, costs
+↳ RAG, hybrid search, citations, routing
+Booking agent: chat that books, cancels, reschedules
+↳ Agents, tool calling, LangGraph, human-in-the-loop
+Evals: test sets, scores, traces and costs
+↳ AI evals, LLM judge, Opik, LLMOps
+MCP and Skills: clinic MCP, partner lab MCP, Skills
+↳ MCP server and client, Agent Skills
+💡 A note: the brief and handouts give you enough detail to get going, but treat them as a starting point, not a limit. Feel free to go beyond them by adding features, improving the design or trying your own ideas. Most of us have been to a hospital or clinic as a patient or with family, so use that experience. Think about what frustrated you and what would have made the visit easier, and build that in.

@@ -1,0 +1,21 @@
+sample_id,message,expected_speciality,expected_doctors,note
+R01,My optician said the pressure in my eyes is high,Glaucoma,Dr. Meera Iyer,
+R02,I have had diabetes for 10 years and never had my eyes checked,Retina,Dr. Kiran Shah,
+R03,My vision has been getting misty over the last year and headlights dazzle me at night,Cataract,"Dr. Anand Rao, Dr. Meera Iyer",
+R04,My 5 year old's left eye turns inwards,Paediatric,Dr. Vikram Menon,Squint is also correct; same doctor
+R05,I want to get rid of my glasses for good,Refractive,Dr. Fatima Khan,
+R06,My eyes feel sandy and tired after a whole day on the laptop,Dry eye,Dr. Fatima Khan,Different words from the document
+R07,I just need new glasses,General,"Dr. Anand Rao, Dr. Kiran Shah, Dr. Vikram Menon",
+R08,Straight lines on the door frame look wavy to me and it's been slowly getting worse,Retina,Dr. Kiran Shah,
+R09,My father and my brother both have glaucoma. Should I get checked?,Glaucoma,Dr. Meera Iyer,
+R10,My daughter sits very close to the TV and squints at the board in school,Paediatric,Dr. Vikram Menon,
+R11,There is a small white spot on the front of my eye for a few months,Cornea,Dr. Fatima Khan,
+R12,My contact lenses feel uncomfortable and I want to try a different kind,Cornea,Dr. Fatima Khan,Refractive or Dry eye also acceptable; same doctor
+R13,I have been seeing double for about a year,Squint,Dr. Vikram Menon,
+R14,Colours look yellowish and I need a lot of light to read now,Cataract,"Dr. Anand Rao, Dr. Meera Iyer",
+R15,My eyes water and itch a little,General,"Dr. Anand Rao, Dr. Kiran Shah, Dr. Vikram Menon",
+R16,I get headaches when I read for long,General,"Dr. Anand Rao, Dr. Kiran Shah, Dr. Vikram Menon",
+R17,Not sure what's wrong. Just want my eyes looked at,General,"Dr. Anand Rao, Dr. Kiran Shah, Dr. Vikram Menon",
+R18,I am 72 and recognising faces is getting harder over the past year,Retina,Dr. Kiran Shah,Cataract also acceptable; a doctor will assess
+R19,aankh mein jalan aur sukhapan rehta hai AC mein,Dry eye,Dr. Fatima Khan,"Hinglish: burning and dryness in the eyes in air conditioning"
+R20,I have a skin rash on my arm,none,none,Not an eye problem; the assistant says NetraCare only sees eye problems

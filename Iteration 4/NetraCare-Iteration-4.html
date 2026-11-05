@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetraCare Iteration 4: Booking Agent</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single reading column of numbered brief sections, with a wide weekly OPD grid as the one visual anchor. */
+:root {
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --ink: #14212b;
+  --muted: #55636e;
+  --line: #d8e0e6;
+  --accent: #0d6e7a;
+  --accent-soft: #e2f1f2;
+  --surgery: #f4e6d4;
+  --surgery-ink: #7a4a12;
+  --off: #eef1f4;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171d; --surface: #16212a; --ink: #e4ebf0; --muted: #9aa9b4; --line: #2a3a46;
+    --accent: #5cc3cd; --accent-soft: #143238; --surgery: #3a2a17; --surgery-ink: #f0c48a;
+    --off: #1b262e; --danger: #f2877c; --danger-soft: #3a1b18; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171d; --surface: #16212a; --ink: #e4ebf0; --muted: #9aa9b4; --line: #2a3a46;
+  --accent: #5cc3cd; --accent-soft: #143238; --surgery: #3a2a17; --surgery-ink: #f0c48a;
+  --off: #1b262e; --danger: #f2877c; --danger-soft: #3a1b18; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 400 17px/1.6 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 64px;
+}
+.wrap { max-width: 860px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.6rem; font-weight: 700; }
+h3 { font-size: 1.1rem; font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); }
+.eyebrow { font: 500 0.78rem/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.mono { font-family: var(--font-mono); font-size: 0.92em; font-variant-numeric: tabular-nums; }
+
+/* Hero */
+header.hero { padding-block: 56px 40px; border-bottom: 1px solid var(--line); display: grid; gap: 28px; grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+.hero .lede { display: grid; gap: 16px; min-width: 0; }
+.hero .sub { font-size: 1.2rem; color: var(--muted); }
+.snellen { font-family: var(--font-display); font-weight: 700; text-align: center; line-height: 1.05; color: var(--ink); user-select: none; }
+.snellen div:nth-child(1) { font-size: 3.2rem; }
+.snellen div:nth-child(2) { font-size: 1.9rem; letter-spacing: 0.12em; }
+.snellen div:nth-child(3) { font-size: 1.15rem; letter-spacing: 0.2em; }
+.snellen div:nth-child(4) { font-size: 0.75rem; letter-spacing: 0.3em; color: var(--muted); }
+@media (max-width: 560px) { header.hero { grid-template-columns: 1fr; } .snellen { display: none; } }
+.fiction { font-size: 0.9rem; color: var(--muted); }
+
+/* Sections */
+section { padding-block: 44px 0; display: grid; gap: 18px; }
+.sec-head { display: grid; gap: 8px; }
+.sec-head .num { font: 500 0.8rem/1 var(--font-mono); color: var(--muted); }
+.objective {
+  background: var(--accent-soft); border-radius: 10px; padding: 24px; display: grid; gap: 14px;
+}
+.objective p.big { font-size: 1.25rem; line-height: 1.5; font-weight: 600; max-width: none; }
+ul, ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+li { max-width: 68ch; }
+
+.pain { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.pain div { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 16px 18px; display: grid; gap: 6px; align-content: start; }
+.pain b { font-family: var(--font-display); font-size: 1.05rem; }
+.pain span { color: var(--muted); font-size: 0.95rem; }
+
+/* Tables */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 500 0.75rem/1.3 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.name { font-weight: 600; white-space: nowrap; }
+
+/* OPD grid */
+.grid-table { min-width: 640px; font-variant-numeric: tabular-nums; }
+.grid-table th.day { text-align: center; }
+.grid-table td.cell { padding: 6px; text-align: center; }
+.halves { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.h { border-radius: 6px; padding: 6px 2px; font: 500 0.72rem/1 var(--font-mono); }
+.h.opd { background: var(--accent-soft); color: var(--accent); }
+.h.sx { background: var(--surgery); color: var(--surgery-ink); }
+.h.off { background: var(--off); color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.9rem; color: var(--muted); align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+
+.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 16px; color: var(--muted); font-size: 0.95rem; }
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.rules > div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 10px; align-content: start; }
+.rules ul { font-size: 0.95rem; }
+.tag { font: 500 0.68rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 2px 5px; vertical-align: 2px; margin-left: 4px; }
+
+.scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.scope > div { border-radius: 10px; padding: 18px; display: grid; gap: 10px; align-content: start; border: 1px solid var(--line); background: var(--surface); }
+.scope .in h3 { color: var(--accent); }
+.scope .out h3 { color: var(--muted); }
+
+.safety { border: 2px solid var(--danger); border-radius: 12px; padding: 22px; display: grid; gap: 16px; background: var(--surface); }
+.safety h2 { color: var(--danger); }
+.redflags { background: var(--danger-soft); border-radius: 8px; padding: 16px 18px; display: grid; gap: 8px; }
+.redflags b { color: var(--danger); }
+.script { font-family: var(--font-mono); font-size: 0.88rem; background: var(--bg); border-radius: 8px; padding: 14px 16px; line-height: 1.5; white-space: pre-wrap; }
+
+.deliver { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.deliver div { border-top: 2px solid var(--accent); padding-top: 10px; display: grid; gap: 4px; }
+.deliver b { font-family: var(--font-display); }
+.deliver span { color: var(--muted); font-size: 0.93rem; }
+.deliver em { font: 500 0.7rem/1 var(--font-mono); font-style: normal; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); }
+.deliver div { align-content: start; }
+.topics { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.topics li { font: 500 0.74rem/1.2 var(--font-mono); background: var(--accent-soft); color: var(--accent); border-radius: 4px; padding: 3px 7px; }
+
+.metrics td:last-child { font-family: var(--font-mono); font-weight: 500; white-space: nowrap; }
+footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<style>
+.budget { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.budget div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 4px; align-content: start; }
+.budget b { font: 500 1.4rem/1 var(--font-display); color: var(--accent); }
+.budget span { font-size: 0.92rem; color: var(--muted); }
+.own { background: var(--accent-soft); border-radius: 10px; padding: 20px 22px; display: grid; gap: 12px; }
+.own h3 { color: var(--accent); }
+.reqs { display: grid; gap: 12px; }
+.req { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 4px 12px; }
+.req .id { font: 500 0.9rem/1.5 var(--font-mono); color: var(--accent); grid-row: span 3; }
+.req h3 { font-size: 1.05rem; }
+.req ul { font-size: 0.95rem; }
+.req .check { font-size: 0.92rem; color: var(--muted); }
+.req .check b { color: var(--ink); font-weight: 600; }
+.roles3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.roles3 > div { border-top: 2px solid var(--accent); padding-top: 10px; display: grid; gap: 6px; align-content: start; }
+.roles3 ul { font-size: 0.95rem; }
+.clock { font: 500 1.05rem/1.4 var(--font-mono); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; }
+.done-list { list-style: none; padding: 0; gap: 8px; }
+.done-list li { position: relative; padding-left: 28px; }
+.done-list li::before { content: ""; position: absolute; left: 0; top: 5px; width: 14px; height: 14px; border: 2px solid var(--accent); border-radius: 3px; }
+.opt { font: 500 0.66rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 2px 5px; margin-left: 4px; vertical-align: 2px; }
+code { font-family: var(--font-mono); font-size: 0.88em; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+</style>
+
+<style>
+.flow { list-style: none; padding: 0; counter-reset: step; display: grid; gap: 8px; }
+.flow li { counter-increment: step; position: relative; padding-left: 34px; font-size: 0.95rem; }
+.flow li::before { content: counter(step); position: absolute; left: 0; top: 1px; width: 22px; height: 22px; border-radius: 50%; background: var(--danger-soft); color: var(--danger); font: 500 0.75rem/22px var(--font-mono); text-align: center; }
+.req > :not(.id) { grid-column: 2; min-width: 0; }
+.req.red { border-color: var(--danger); }
+.req.red .id { color: var(--danger); }
+.req .script { margin-block: 4px; }
+</style>
+
+<style>
+.pipe { list-style: none; padding: 0; counter-reset: step; display: grid; gap: 8px; }
+.pipe li { counter-increment: step; position: relative; padding-left: 34px; font-size: 0.95rem; }
+.pipe li::before { content: counter(step); position: absolute; left: 0; top: 1px; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font: 500 0.75rem/22px var(--font-mono); text-align: center; }
+.pipe li.stop::before { background: var(--danger-soft); color: var(--danger); }
+.req > :not(.id) { grid-column: 2; min-width: 0; }
+.req.red { border-color: var(--danger); }
+.req.red .id { color: var(--danger); }
+.req .script { margin-block: 4px; }
+.search2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.search2 > div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; gap: 8px; align-content: start; }
+.search2 h3 { color: var(--accent); }
+.search2 p { font-size: 0.95rem; }
+.search2 .ex { font-size: 0.9rem; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="lede">
+      <div class="eyebrow">NetraCare capstone · Iteration 4 of 6</div>
+      <h1>A Chat Agent That Books for the Patient</h1>
+      <p class="sub">Agents with LangGraph: tools, memory and human-in-the-loop. The patient chat finds free slots and books, cancels and reschedules by calling your clinic API, and Staff stay in control of late changes.</p>
+      <p class="fiction">Read with the NetraCare Capstone Brief. NetraCare is a fictional clinic. All data is synthetic.</p>
+    </div>
+    <div class="snellen" aria-hidden="true"><div>N</div><div>E T</div><div>R A C</div><div>A R E</div></div>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="num">01</span><h2>Where you are</h2></div>
+    <p>You have the iteration 3 website: booking with every clinic rule in the backend, the red-flag check, doctor summaries, and a patient chat that answers from clinic documents with sources. You have now learnt agents: tool calling, LangGraph, memory and human-in-the-loop. This iteration turns the chat into an agent. It decides which tools to call, finds free slots, and books, cancels or reschedules after the patient confirms. Your iteration 1 API still decides what is allowed. The agent only chooses and explains.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">02</span><h2>Time and how to work</h2></div>
+    <div class="budget">
+      <div><b>~4 hrs</b><span>Total, for a beginner using agentic coding</span></div>
+      <div><b>30 min</b><span>Plan, load data pack 4, rebuild the index</span></div>
+      <div><b>35 min</b><span>API: reschedule and Staff approvals</span></div>
+      <div><b>40 min</b><span>Tools over your API, with the patient taken from the login</span></div>
+      <div><b>50 min</b><span>The agent graph, its prompt and conversation memory</span></div>
+      <div><b>30 min</b><span>Confirm before acting: the confirmation card</span></div>
+      <div><b>55 min</b><span>Run the checks by hand, tune the prompt, review the code</span></div>
+    </div>
+    <div class="own">
+      <h3>Use agentic coding, and own the result</h3>
+      <p>Keep working with Claude Code or Cursor. Let the AI write most of the code, and spend your time on the tools, the agent's prompt and the graph. You must be able to explain it in the final demo.</p>
+      <ul>
+        <li><b>Understand the high-level flow:</b> draw your graph, and follow one message from the patient to a booking in the database (section 04).</li>
+        <li><b>Understand the important details:</b> how the LLM picks a tool from its name and description, why the patient's ID never comes from the LLM, where the agent stops and waits for a person, and why a refusal from the API is a normal result, not an error.</li>
+        <li><b>Read the tool calls.</b> When the agent does something odd, print each tool call and its result, and read them in order. Most problems are a vague tool description or a missing fact in the prompt, such as today's date.</li>
+        <li><b>Start with a short spec.</b> Give your AI tool this handout and the data pack 4 README, and ask it to plan before it codes.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">03</span><h2>What you'll build</h2></div>
+    <p>Your iteration 3 website, with the chat upgraded to a booking agent, plus the Staff and Doctor screens that keep people in control.</p>
+    <div class="roles3">
+      <div><h3>Patient</h3><ul>
+        <li>Ask the chat for free times in plain words, such as "Saturday morning, or else the earliest weekday"</li>
+        <li>Book, cancel and reschedule in the chat, after confirming each action on a card</li>
+        <li>Ask "What appointments do I have?" and "Book my follow-up"</li>
+        <li>Still ask about the clinic and get answers with sources</li>
+        <li>See a late cancel or reschedule waiting for Staff</li>
+      </ul></div>
+      <div><h3>Staff</h3><ul>
+        <li>Approve or reject a patient's cancel or reschedule inside 2 hours</li>
+        <li>Approve or reject each rebooking after a doctor's leave <span class="opt">optional, R7</span></li>
+        <li>See red flags from the chat as urgent cases, as before</li>
+      </ul></div>
+      <div><h3>Doctor</h3><ul>
+        <li>No change in this iteration</li>
+        <li>Mark leave for a morning, an afternoon or a full day <span class="opt">optional, R7</span></li>
+      </ul></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">04</span><h2>How the agent works</h2></div>
+    <p>Each patient message runs through a small LangGraph graph. The agent node loops with the tools node until it has an answer, and pauses for the patient before anything changes.</p>
+    <ol class="pipe">
+      <li class="stop"><b>Red-flag node.</b> Your code runs <code>check_red_flags</code> on the patient's message. A red flag ends here with the emergency response, an urgent case and no tool calls.</li>
+      <li><b>Agent node.</b> The LLM gets its instructions, today's date and a 30-day calendar, the patient's appointments and past visits, and the conversation. It replies, asks a question, or asks for one or more tools.</li>
+      <li><b>Tools node.</b> Runs the tools the LLM asked for and returns the results to the agent node. The loop repeats until the agent replies, up to a step limit.</li>
+      <li class="stop"><b>Confirm.</b> Before a book, cancel or reschedule reaches the API, the graph pauses and the patient sees a card with Confirm and No. Nothing changes until they confirm.</li>
+      <li><b>The API decides.</b> The tool calls the same rules check as your website. A refusal comes back with its reason code, and the agent explains it and offers free times instead.</li>
+      <li><b>Your code finishes the reply.</b> It adds the sources from any document search, as in iteration 3, and shows the card or the answer.</li>
+    </ol>
+    <h3>Who decides what</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Decision</th><th>Made by</th></tr></thead>
+      <tbody>
+        <tr><td>Which tools to call, which free time to offer, how to explain a refusal</td><td>The agent (the LLM)</td></tr>
+        <tr><td>Whether a booking, cancel or reschedule is allowed</td><td>Your API, with the brief's section 04 rules</td></tr>
+        <tr><td>Whether to go ahead with an action</td><td>The patient, on the confirmation card</td></tr>
+        <tr><td>A patient's cancel or reschedule inside 2 hours, and rebooking after doctor leave if you build R7</td><td>Staff</td></tr>
+        <tr><td>Red flags, which patient is acting, the sources and "I don't know"</td><td>Your code, never the LLM</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">05</span><h2>Requirements</h2></div>
+    <div class="reqs">
+      <div class="req"><span class="id">R1</span><h3>Finish the clinic API</h3>
+        <ul>
+          <li><b>Reschedule</b> (a stretch goal in iteration 1; reuse it if you built it). It is one action: check the new booking as if the old one were already cancelled, then cancel the old one and book the new one together. If the new booking is refused, the original stays exactly as it was.</li>
+          <li><b>Staff approvals.</b> A patient's cancel or reschedule inside 2 hours no longer just says "Please contact Staff". It saves an approval request and returns <code>to_staff</code>. The appointment stays booked. Staff see the requests and click Approve, which carries out the action as Staff, or Reject. The patient sees the request's status next to the appointment.</li>
+        </ul>
+        <p class="check"><b>Check:</b> try each in FastAPI's <code>/docs</code> page before you build any tools.</p></div>
+
+      <div class="req"><span class="id">R2</span><h3>Tools over your API</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Tool</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td class="name mono">search_clinic_docs</td><td>Your iteration 3 answer chain: hybrid search and an answer with sources, or "I don't know"</td></tr>
+            <tr><td class="name mono">list_doctors</td><td>Doctors with their IDs, specialities and OPD days</td></tr>
+            <tr><td class="name mono">find_slots</td><td>Free start times for a speciality or a doctor, a visit type, a date range and an optional session (AM or PM). At most 10, earliest first</td></tr>
+            <tr><td class="name mono">my_appointments</td><td>The patient's upcoming appointments, with IDs, and any requests waiting for Staff</td></tr>
+            <tr><td class="name mono">book_appointment</td><td>Doctor, speciality, visit type, date, start time and reason</td></tr>
+            <tr><td class="name mono">cancel_appointment</td><td>One of the patient's appointments, by ID</td></tr>
+            <tr><td class="name mono">reschedule_appointment</td><td>One of the patient's appointments, by ID, to a new doctor, date and start time</td></tr>
+          </tbody>
+        </table></div>
+        <ul>
+          <li>Each tool calls the same functions your endpoints use. A tool never re-checks a rule itself and never writes to the database directly.</li>
+          <li><b>The patient comes from the login, never from the LLM.</b> Pass the patient's ID to the tools through the graph's config, not as a tool argument, so the LLM can't act for someone else.</li>
+          <li>Give each tool a clear name, a one-line description and typed arguments. The LLM chooses tools from these.</li>
+          <li>Return short structured results. A refusal is a normal result with the reason code and the plain-words message, such as <code>{"result": "refused", "reason_code": "DOCTOR_OFF", "message": "Dr. Iyer is not at the clinic on Thursdays"}</code>.</li>
+        </ul>
+        <p class="check"><b>Check:</b> call each tool from a Python shell as a patient, including one refusal and one appointment that belongs to someone else.</p></div>
+
+      <div class="req"><span class="id">R3</span><h3>The agent graph and its prompt</h3>
+        <ul>
+          <li>Build a <code>StateGraph</code> yourself with three nodes: the red-flag node, the agent node (the chat model with the tools bound to it) and a tools node, as in section 04. Set a step limit; if it is reached, the chat shows "Sorry, I can't finish that just now. Please try again, or ask Staff at the front desk."</li>
+          <li>Build the system prompt for every message, from the database:
+            <ul>
+              <li>Today's date, weekday and time, and the next 30 days, each with its weekday and "open" or "holiday", so "next Saturday" is never a guess.</li>
+              <li>The patient's name and age, their upcoming appointments, and their past visits (date, doctor, speciality, visit type). Leave out doctor notes and the health profile; the agent doesn't need them.</li>
+            </ul></li>
+          <li>The prompt tells the agent to:
+            <ul>
+              <li>find free times with <code>find_slots</code> before offering any, and never offer a time it hasn't seen there;</li>
+              <li>ask for the reason for the visit before booking;</li>
+              <li>book a follow-up with the doctor who saw the patient last in that speciality, and a new consultation otherwise;</li>
+              <li>pick the speciality before looking for slots: a patient under 16 always books Paediatric (Dr. Menon), whatever the problem; and when a patient describes a problem instead of naming a speciality, such as "my eyes hurt when I read the board", use the same speciality routing as your iteration 3 chat;</li>
+              <li>explain a refusal in plain words and offer free times, or say clearly when nothing is free in the next 30 days;</li>
+              <li>keep the iteration 3 rules: no conditions, no treatment, nothing outside NetraCare.</li>
+            </ul></li>
+        </ul>
+        <p class="check"><b>Check:</b> the multi-step rows in section 10 offer the times described.</p></div>
+
+      <div class="req"><span class="id">R4</span><h3>Conversation memory</h3>
+        <ul>
+          <li>Add a LangGraph checkpointer (<code>InMemorySaver</code>) and give every chat a <code>thread_id</code>. The browser sends only the new message and the <code>thread_id</code>; the checkpointer keeps the conversation.</li>
+          <li>Send the agent at most the last 20 messages, so long chats stay fast.</li>
+          <li>"New chat" and logging out start a new <code>thread_id</code>. Nothing from the chat is saved to the database, apart from what the tools do and urgent cases.</li>
+          <li>The iteration 3 rewrite step goes away: the agent writes a standalone question when it calls <code>search_clinic_docs</code>.</li>
+        </ul>
+        <p class="check"><b>Check:</b> "Actually, make it the afternoon" works in the same chat, and logging out and back in shows an empty chat.</p></div>
+
+      <div class="req red"><span class="id">R5</span><h3>Confirm before every action</h3>
+        <ul>
+          <li><code>book_appointment</code>, <code>cancel_appointment</code> and <code>reschedule_appointment</code> call LangGraph's <code>interrupt()</code> with a one-line summary before they call the API, for example <i>Book Dr. Kiran Shah, Retina follow-up, Fri 13 Nov, 9:00 AM (10 min)?</i></li>
+          <li>The chat shows the summary on a card with Confirm and No. The answer resumes the graph with <code>Command(resume=...)</code>. On No, nothing changes and the agent asks what the patient would like instead.</li>
+          <li><code>POST /chat</code> takes <code>{thread_id, message}</code>, or <code>{thread_id, confirm: true|false}</code> from the card. While an action is waiting, its response includes <code>pending_action</code>. A typed message while an action is waiting counts as No, and the agent then handles the new message.</li>
+        </ul>
+        <p class="check"><b>Check:</b> no appointment changes in the database until Confirm is pressed.</p></div>
+
+      <div class="req red"><span class="id">R6</span><h3>Red flags and clinic answers in the agent</h3>
+        <ul>
+          <li>The red-flag node checks every typed message, as in iteration 3, with the same emergency response, urgent case and failure message. The booking API also still checks the reason, as in iteration 2.</li>
+          <li><code>search_clinic_docs</code> returns the iteration 3 answer, its sources and whether it answered. Your code adds the <i>Sources:</i> line under the agent's reply from that result. The agent never writes sources itself.</li>
+          <li>If the documents don't cover the question, the tool returns the fixed "I don't know" message and the agent passes it on word for word.</li>
+        </ul>
+        <p class="check"><b>Check:</b> the red-flag, sources and "I don't know" rows in section 10 behave as described.</p></div>
+
+      <div class="req"><span class="id">R7</span><h3>Doctor leave and Staff rebooking <span class="opt">optional</span></h3>
+        <p class="check">Optional. Try it if you have time after R1 to R6. It completes the last rule in brief section 04.</p>
+        <ul>
+          <li>Add leave to the rules check: no booking in a session the doctor has marked as leave (reason code <code>DOCTOR_ON_LEAVE</code>), and free slots skip those sessions.</li>
+          <li>A doctor marks leave for a date and AM, PM or the full day, within the next 30 days.</li>
+          <li>Your code then works through the affected appointments in time order. This is a fixed set of steps, so it is plain code, not an agent. For each one it cancels the appointment and proposes a new time, using your free-slots function:
+            <ul>
+              <li>A new consultation: the earliest free slot, at or after the original time, with any doctor who covers that speciality. If only that doctor covers it, this is their next free slot.</li>
+              <li>A follow-up stays with the same doctor: their next free slot.</li>
+              <li>A tie goes to the original doctor, then to the lower doctor ID.</li>
+            </ul></li>
+          <li>Save each proposal as an appointment with the status <code>proposed</code>. It holds the slot. If nothing is free within the 30-day window, say "No slot: call the patient".</li>
+          <li>Staff see a rebooking list and click Approve, which makes it <code>booked</code>, or Reject, which frees the slot. The patient sees "Moved because Dr. … is on leave", with the new time once Staff approve it.</li>
+        </ul>
+        <p class="check"><b>Check:</b> pick a Monday in the next few weeks that is not a holiday. As Staff, book with Dr. Rao that day a new Cataract consultation at 10:00, a new General consultation at 10:20, and Asha Verma's Cataract follow-up at 11:00. As Dr. Rao, mark that Monday as leave. All three are cancelled, and Staff see three proposals: Cataract with Dr. Iyer at 10:00 that Monday, General with Dr. Shah at 10:20 that Monday, and Asha's follow-up with Dr. Rao at his next free time (Tuesday at 9:00 if that day is open and free). After Staff approve them, Asha sees the new time and why it moved, and the chat won't book Dr. Rao that Monday.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">06</span><h2>Rules and safety in this iteration</h2></div>
+    <p>The agent can now change the database, so <b>0 bookings that break a clinic rule</b> is the target that matters most here. It adds two rules from brief section 04: rescheduling, and Staff approval inside 2 hours. Doctor leave, the last one, is optional (R7). All the other targets from iterations 2 and 3 still hold in the chat. Iteration 5 measures them on a larger test set.</p>
+    <div class="safety">
+      <h2>Safety rules</h2>
+      <ul>
+        <li>Every chat message goes through the red-flag check first. A red flag gets the emergency response and an urgent case, and the agent books nothing.</li>
+        <li>The API decides every booking, cancel and reschedule. The agent can never skip a rule, and its tools can never write to the database directly.</li>
+        <li>Nothing changes until the patient presses Confirm. A late cancel or reschedule waits for Staff.</li>
+        <li>The patient's ID comes from the login. The agent only ever sees and changes that patient's appointments.</li>
+        <li>The chat never names a likely condition and never suggests treatment. Answers about policy or procedure show their sources, or "I don't know".</li>
+        <li>If the red-flag check can't run, the chat doesn't answer or act.</li>
+      </ul>
+    </div>
+    <ul>
+      <li>The agent's prompt has no doctor notes or health details. It doesn't need them to book.</li>
+      <li>Use only the data packs. Keep your API keys in <code>.env</code>, as before.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">07</span><h2>Data pack</h2></div>
+    <p>Download <code>netracare-data-pack-04.zip</code> from your instructor. Keep using data packs 1 to 3. Copy the updated policy document over your old copy and rebuild your index.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>File</th><th>Use</th></tr></thead>
+      <tbody>
+        <tr><td class="name mono">documents/clinic_policy_faq.md</td><td>Replaces the data pack 3 copy, with new sections on booking through the chat and on doctor leave</td></tr>
+        <tr><td class="name mono">agent_scenarios.csv</td><td>24 chat scenarios with the expected tools and result, on a fixed clock. Stretch goal; iteration 5 uses them again</td></tr>
+        <tr><td class="name mono">leave_scenarios.csv</td><td>5 doctor leave cases with the rebooking your code should propose, on a fixed clock. For the optional R7</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">08</span><h2>Technology choices</h2></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Part</th><th>Use</th></tr></thead>
+      <tbody>
+        <tr><td class="name">Agent framework</td><td>LangGraph <b>(required)</b>: <code>StateGraph</code> with <code>MessagesState</code>, <code>ToolNode</code> and <code>tools_condition</code>, <code>InMemorySaver</code>, <code>interrupt()</code> and <code>Command</code>. Build the graph yourself instead of using a prebuilt agent, so you can draw and explain every node.</td></tr>
+        <tr><td class="name">Tools</td><td>LangChain's <code>@tool</code>, with typed arguments and a clear description for each.</td></tr>
+        <tr><td class="name">Model</td><td>Any chat model that supports tool calling, from <code>.env</code> as before. Use a low temperature.</td></tr>
+        <tr><td class="name">Tracing</td><td>Optional. Turning on LangSmith takes only a few environment variables and shows every tool call. You'll set up observability properly in iteration 5.</td></tr>
+        <tr><td class="name">Everything else</td><td>As in iteration 3.</td></tr>
+        <tr><td class="name">Testing</td><td>By hand, using the checks in section 10. The scenario files are a stretch goal.</td></tr>
+      </tbody>
+    </table></div>
+    <p>Put the tools in <code>tools.py</code>, and the graph and its prompt in <code>agent.py</code>. Give each LLM call a timeout.</p>
+    <p>Suggested new endpoints (adapt as you like): <code>POST /chat</code> (now with <code>thread_id</code> and <code>confirm</code>), <code>POST /appointments/{id}/reschedule</code>, <code>GET /staff/approvals</code>, <code>POST /staff/approvals/{id}/approve</code> and <code>/reject</code>, and, if you build R7, <code>POST /doctor/leave</code>, <code>GET /staff/rebookings</code>, <code>POST /staff/rebookings/{id}/approve</code> and <code>/reject</code>.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">09</span><h2>Suggested steps</h2></div>
+    <ol>
+      <li>Ask your AI tool to read this handout and the data pack 4 README, and write a short plan: API changes, tools, the graph and the confirmation card.</li>
+      <li>Copy in the updated policy document and rebuild the index.</li>
+      <li>Add reschedule and Staff approvals to the API (R1). Try them in <code>/docs</code>.</li>
+      <li>Write the tools and call them from a Python shell (R2).</li>
+      <li>Build the graph with the agent and tools nodes, and the prompt with the calendar and patient details (R3). Print every tool call while you try the booking rows in section 10.</li>
+      <li>Add the checkpointer and <code>thread_id</code> (R4), then the confirmation card (R5), then put the red-flag node in front and the sources back on (R6).</li>
+            <li>Work through every check in section 10 and fix anything that doesn't behave.</li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">10</span><h2>Done when</h2></div>
+    <p>Try each of these by hand in your app, in the patient chat unless it says otherwise. Use dates in the next few weeks, and check the database after each action.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Try this</th><th>Expected</th></tr></thead>
+      <tbody>
+        <tr><td>As Asha Verma: "Book my retina follow-up with Dr. Shah next Friday morning, the earliest time. Reason: diabetic eye review"</td><td>A confirmation card for Dr. Kiran Shah, Retina follow-up (10 min), next Friday at the earliest free morning time. Nothing booked until Confirm; after it, the appointment is on her page</td></tr>
+        <tr><td>Then, in the same chat: "Actually, make it the afternoon"</td><td>One card to reschedule that appointment to Friday afternoon. After Confirm, the old time is cancelled and the new one booked</td></tr>
+        <tr><td>As Aditya Bose: "I'd like a retina check on Saturday morning. If that's not possible, the earliest weekday after it. Reason: my optician asked for a retina check"</td><td>Says Dr. Shah isn't at the clinic on Saturdays, and offers his earliest free weekday time after that Saturday, skipping any holiday</td></tr>
+        <tr><td>"Book a glaucoma check with Dr. Iyer on Thursday"</td><td>Says Dr. Iyer isn't at the clinic on Thursdays and offers another day. Nothing booked</td></tr>
+        <tr><td>As Asha, ask for another Retina appointment</td><td>Says she already has one (the date and doctor) and offers to change it instead</td></tr>
+        <tr><td>As Aditya: "Book a glaucoma follow-up with Dr. Iyer"</td><td>Explains he hasn't been seen in Glaucoma, so it is a new consultation (20 min)</td></tr>
+        <tr><td>As Divya Pillai (age 11): "My eyes hurt when I read the board at school. Can I come on Saturday?"</td><td>Asks for or uses the reason, and offers Paediatric with Dr. Vikram Menon on Saturday. Names no condition</td></tr>
+        <tr><td>Press No on any confirmation card</td><td>Nothing changes, and the agent asks what to do instead</td></tr>
+        <tr><td>As Staff, book a patient into a slot that starts in under 2 hours (during clinic hours). As that patient, ask the chat to cancel it and confirm</td><td>Says the request has gone to Staff. It shows in the Staff approvals; after Approve, the appointment is cancelled and the patient sees it</td></tr>
+        <tr><td>"Cancel appointment &lt;the ID of another patient's appointment&gt;"</td><td>Refuses, and shows nothing about that appointment. The appointment is unchanged</td></tr>
+        <tr><td>"How much is a new consultation? And book me a general check-up next Wednesday afternoon"</td><td>₹800 with <i>Sources: clinic_policy_faq.md › Consultation fees</i>, and a card for a General doctor next Wednesday afternoon</td></tr>
+        <tr><td>"Is there parking at the clinic?"</td><td>The "I don't know" message, with no sources</td></tr>
+        <tr><td>"Book me with Dr. Rao tomorrow", then, when asked for the reason: "Floor cleaner went in my eye this morning"</td><td>Emergency response in red, no booking, and an urgent case from the chat at the top of the Staff view</td></tr>
+        <tr><td>Click "New chat", then log out and back in</td><td>The chat is empty each time</td></tr>
+        <tr><td>Remove your API key and restart</td><td>The chat shows "We couldn't check your message just now" and does nothing</td></tr>
+      </tbody>
+    </table></div>
+    <ul class="done-list">
+      <li>Every check above behaves as expected, and no booking in the database breaks a clinic rule.</li>
+      <li>Every iteration 1, 2 and 3 check still passes. The iteration 3 check "Can you book me with Dr. Shah tomorrow at 10?" now books, after Confirm.</li>
+      <li>You can draw your graph and explain each node.</li>
+      <li>Your API keys are not in your repository.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">11</span><h2>What to submit</h2></div>
+    <ul>
+      <li>Repository link, with a README that explains how to run the app and set up the keys, and a picture or sketch of your graph.</li>
+      <li>A demo video of 4 minutes or less: a multi-step booking with its confirmation card, a reschedule in the same chat, a refusal the agent explains, a late cancel approved by Staff, and one red flag in the chat.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">12</span><h2>Stretch goals</h2></div>
+    <ul>
+      <li><b>Doctor leave (R7):</b> if you want to go further, build R7 in section 05: doctor leave, rebooking proposals and the Staff rebooking list. <span class="opt">optional</span></li>
+      <li><b>Scenario run:</b> with <code>CLINIC_NOW</code> fixed (see the data pack 4 README), write a script that plays every row of <code>agent_scenarios.csv</code> through <code>POST /chat</code> and checks the database. Iteration 5 builds on it. <span class="opt">optional</span></li>
+      <li><b>Leave check:</b> if you built R7, run <code>leave_scenarios.csv</code> on the fixed clock and compare your proposals. <span class="opt">optional</span></li>
+      <li><b>Leave as a LangGraph workflow:</b> build the rebooking as a graph that pauses with <code>interrupt()</code> for each Staff approval, with a SQLite checkpointer so it survives a restart. <span class="opt">optional</span></li>
+      <li><b>Patient chooses:</b> after leave, offer the patient the proposed time or two others in the chat, instead of Staff approving it. <span class="opt">optional</span></li>
+      <li><b>Staff assistant:</b> a second agent for Staff, with tools to book for any patient and work through approvals. <span class="opt">optional</span></li>
+      <li><b>Supervisor:</b> split the chat into an information agent and a booking agent, with a supervisor that routes each message. Compare it with your single agent. <span class="opt">optional</span></li>
+      <li>Show the agent's progress while it works, such as "Checking Dr. Shah's free times…" <span class="opt">optional</span></li>
+      <li>Turn on LangSmith tracing and look at a full booking run <span class="opt">optional</span></li>
+    </ul>
+  </section>
+
+  <footer>Next: Iteration 5 proves NetraCare against the brief's targets with golden datasets, evals and observability, reusing the scenarios from this data pack.</footer>
+</div>
+
+</body>
+</html>

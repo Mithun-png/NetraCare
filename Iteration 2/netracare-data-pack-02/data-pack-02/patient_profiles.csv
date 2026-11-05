@@ -1,0 +1,26 @@
+patient_id,general_health,allergies
+P01,Type 2 diabetes; high blood pressure,None known
+P02,None recorded,None known
+P03,High blood pressure,Sulfa drugs
+P04,None recorded,None known
+P05,None recorded,None known
+P06,Type 2 diabetes,Penicillin
+P07,None recorded,None known
+P08,None recorded,Dust (hay fever)
+P09,High cholesterol,None known
+P10,None recorded,None known
+P11,None recorded,None known
+P12,None recorded,None known
+P13,Type 2 diabetes; kidney disease (stage 2),None known
+P14,Rheumatoid arthritis,None known
+P15,Asthma,None known
+P16,None recorded,None known
+P17,None recorded,None known
+P18,Heart disease; takes blood thinner (aspirin),None known
+P19,Thyroid (hypothyroid),None known
+P20,None recorded,None known
+P21,None recorded,None known
+P22,Eczema,None known
+P23,None recorded,None known
+P24,High blood pressure,Iodine contrast
+P25,None recorded,None known

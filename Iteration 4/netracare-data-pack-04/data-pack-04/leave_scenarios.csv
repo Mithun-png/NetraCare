@@ -1,0 +1,6 @@
+leave_id,setup,doctor_id,leave_date,leave_session,affected_appointment,patient_id,original,expected_proposal,why
+L1,,D1,2026-11-03,FULL,A101,P01,D1 Cataract new 2026-11-03 09:00,D1 Cataract new 2026-11-04 09:00,"Dr. Iyer (also Cataract) is operating on Tuesday. On Wednesday both are free at 9:00, so the same doctor wins the tie"
+L1,,D1,2026-11-03,FULL,A102,P02,D1 General new 2026-11-03 09:20,D3 General new 2026-11-03 09:20,Dr. Shah and Dr. Menon also cover General and are free at the same time; the lower doctor ID wins
+L2,,D1,2026-11-10,PM,A109,P09,D1 Cataract follow_up 2026-11-10 15:00,D1 Cataract follow_up 2026-11-11 09:00,A follow-up stays with the same doctor: Dr. Rao's next free time
+L3,,D3,2026-11-19,FULL,A111,P11,D3 General new 2026-11-19 16:00,D1 General new 2026-11-19 16:00,Dr. Rao and Dr. Menon cover General on Thursday afternoon; the lower doctor ID wins
+L4,"As Staff, book P20 Aditya Bose for Retina (new) with Dr. Shah on 2026-11-04 at 09:00",D3,2026-11-04,AM,(the new booking),P20,D3 Retina new 2026-11-04 09:00,D3 Retina new 2026-11-05 09:00,"Only Dr. Shah covers Retina, and he is operating on Wednesday afternoon, so his next free time is Thursday morning"

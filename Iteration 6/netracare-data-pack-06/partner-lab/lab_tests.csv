@@ -1,0 +1,8 @@
+test_id,name,also_known_as,sample,fasting,report_ready,indicative_price,notes
+L1,HbA1c,glycated haemoglobin;a1c;3-month sugar;average sugar,Blood,No fasting needed,Same day by 6 PM,₹450,Shows average blood sugar over about 3 months
+L2,Fasting blood sugar,fbs;fasting sugar;fasting glucose,Blood,Fast for 8 to 10 hours. Plain water is allowed,Same day within 4 hours,₹120,Take the test in the morning before breakfast
+L3,Post-meal blood sugar,ppbs;pp sugar;after food sugar;postprandial,Blood,Give the sample 2 hours after a normal meal,Same day within 4 hours,₹120,Note the time you finished eating and tell the lab
+L4,Random blood sugar,rbs;random sugar,Blood,No fasting needed,Within 1 hour,₹100,
+L5,Complete blood count,cbc;blood count;haemogram,Blood,No fasting needed,Same day by 6 PM,₹350,
+L6,Pre-surgery blood tests (eye surgery),pre-op tests;surgery blood tests;pre-operative panel;cataract blood tests,Blood and urine,Fast for 8 to 10 hours. Plain water is allowed,Next day by 12 noon,"₹1,200","Fasting blood sugar, post-meal blood sugar, complete blood count and urine routine. Bring the doctor's request slip"
+L7,Urine routine,urine test;urine r/e;urine examination,Urine,No fasting needed,Same day by 6 PM,₹150,An early morning sample is best. The lab gives you a container

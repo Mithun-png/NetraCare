@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetraCare Iteration 2: Add Your First LLM Features</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single reading column of numbered brief sections, with a wide weekly OPD grid as the one visual anchor. */
+:root {
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --ink: #14212b;
+  --muted: #55636e;
+  --line: #d8e0e6;
+  --accent: #0d6e7a;
+  --accent-soft: #e2f1f2;
+  --surgery: #f4e6d4;
+  --surgery-ink: #7a4a12;
+  --off: #eef1f4;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171d; --surface: #16212a; --ink: #e4ebf0; --muted: #9aa9b4; --line: #2a3a46;
+    --accent: #5cc3cd; --accent-soft: #143238; --surgery: #3a2a17; --surgery-ink: #f0c48a;
+    --off: #1b262e; --danger: #f2877c; --danger-soft: #3a1b18; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171d; --surface: #16212a; --ink: #e4ebf0; --muted: #9aa9b4; --line: #2a3a46;
+  --accent: #5cc3cd; --accent-soft: #143238; --surgery: #3a2a17; --surgery-ink: #f0c48a;
+  --off: #1b262e; --danger: #f2877c; --danger-soft: #3a1b18; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 400 17px/1.6 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 64px;
+}
+.wrap { max-width: 860px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.6rem; font-weight: 700; }
+h3 { font-size: 1.1rem; font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); }
+.eyebrow { font: 500 0.78rem/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.mono { font-family: var(--font-mono); font-size: 0.92em; font-variant-numeric: tabular-nums; }
+
+/* Hero */
+header.hero { padding-block: 56px 40px; border-bottom: 1px solid var(--line); display: grid; gap: 28px; grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+.hero .lede { display: grid; gap: 16px; min-width: 0; }
+.hero .sub { font-size: 1.2rem; color: var(--muted); }
+.snellen { font-family: var(--font-display); font-weight: 700; text-align: center; line-height: 1.05; color: var(--ink); user-select: none; }
+.snellen div:nth-child(1) { font-size: 3.2rem; }
+.snellen div:nth-child(2) { font-size: 1.9rem; letter-spacing: 0.12em; }
+.snellen div:nth-child(3) { font-size: 1.15rem; letter-spacing: 0.2em; }
+.snellen div:nth-child(4) { font-size: 0.75rem; letter-spacing: 0.3em; color: var(--muted); }
+@media (max-width: 560px) { header.hero { grid-template-columns: 1fr; } .snellen { display: none; } }
+.fiction { font-size: 0.9rem; color: var(--muted); }
+
+/* Sections */
+section { padding-block: 44px 0; display: grid; gap: 18px; }
+.sec-head { display: grid; gap: 8px; }
+.sec-head .num { font: 500 0.8rem/1 var(--font-mono); color: var(--muted); }
+.objective {
+  background: var(--accent-soft); border-radius: 10px; padding: 24px; display: grid; gap: 14px;
+}
+.objective p.big { font-size: 1.25rem; line-height: 1.5; font-weight: 600; max-width: none; }
+ul, ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+li { max-width: 68ch; }
+
+.pain { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.pain div { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 16px 18px; display: grid; gap: 6px; align-content: start; }
+.pain b { font-family: var(--font-display); font-size: 1.05rem; }
+.pain span { color: var(--muted); font-size: 0.95rem; }
+
+/* Tables */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 500 0.75rem/1.3 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.name { font-weight: 600; white-space: nowrap; }
+
+/* OPD grid */
+.grid-table { min-width: 640px; font-variant-numeric: tabular-nums; }
+.grid-table th.day { text-align: center; }
+.grid-table td.cell { padding: 6px; text-align: center; }
+.halves { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.h { border-radius: 6px; padding: 6px 2px; font: 500 0.72rem/1 var(--font-mono); }
+.h.opd { background: var(--accent-soft); color: var(--accent); }
+.h.sx { background: var(--surgery); color: var(--surgery-ink); }
+.h.off { background: var(--off); color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.9rem; color: var(--muted); align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+
+.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 16px; color: var(--muted); font-size: 0.95rem; }
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.rules > div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 10px; align-content: start; }
+.rules ul { font-size: 0.95rem; }
+.tag { font: 500 0.68rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 2px 5px; vertical-align: 2px; margin-left: 4px; }
+
+.scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.scope > div { border-radius: 10px; padding: 18px; display: grid; gap: 10px; align-content: start; border: 1px solid var(--line); background: var(--surface); }
+.scope .in h3 { color: var(--accent); }
+.scope .out h3 { color: var(--muted); }
+
+.safety { border: 2px solid var(--danger); border-radius: 12px; padding: 22px; display: grid; gap: 16px; background: var(--surface); }
+.safety h2 { color: var(--danger); }
+.redflags { background: var(--danger-soft); border-radius: 8px; padding: 16px 18px; display: grid; gap: 8px; }
+.redflags b { color: var(--danger); }
+.script { font-family: var(--font-mono); font-size: 0.88rem; background: var(--bg); border-radius: 8px; padding: 14px 16px; line-height: 1.5; white-space: pre-wrap; }
+
+.deliver { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.deliver div { border-top: 2px solid var(--accent); padding-top: 10px; display: grid; gap: 4px; }
+.deliver b { font-family: var(--font-display); }
+.deliver span { color: var(--muted); font-size: 0.93rem; }
+.deliver em { font: 500 0.7rem/1 var(--font-mono); font-style: normal; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); }
+.deliver div { align-content: start; }
+.topics { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.topics li { font: 500 0.74rem/1.2 var(--font-mono); background: var(--accent-soft); color: var(--accent); border-radius: 4px; padding: 3px 7px; }
+
+.metrics td:last-child { font-family: var(--font-mono); font-weight: 500; white-space: nowrap; }
+footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<style>
+.budget { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.budget div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 4px; align-content: start; }
+.budget b { font: 500 1.4rem/1 var(--font-display); color: var(--accent); }
+.budget span { font-size: 0.92rem; color: var(--muted); }
+.own { background: var(--accent-soft); border-radius: 10px; padding: 20px 22px; display: grid; gap: 12px; }
+.own h3 { color: var(--accent); }
+.reqs { display: grid; gap: 12px; }
+.req { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 4px 12px; }
+.req .id { font: 500 0.9rem/1.5 var(--font-mono); color: var(--accent); grid-row: span 3; }
+.req h3 { font-size: 1.05rem; }
+.req ul { font-size: 0.95rem; }
+.req .check { font-size: 0.92rem; color: var(--muted); }
+.req .check b { color: var(--ink); font-weight: 600; }
+.roles3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.roles3 > div { border-top: 2px solid var(--accent); padding-top: 10px; display: grid; gap: 6px; align-content: start; }
+.roles3 ul { font-size: 0.95rem; }
+.clock { font: 500 1.05rem/1.4 var(--font-mono); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; }
+.done-list { list-style: none; padding: 0; gap: 8px; }
+.done-list li { position: relative; padding-left: 28px; }
+.done-list li::before { content: ""; position: absolute; left: 0; top: 5px; width: 14px; height: 14px; border: 2px solid var(--accent); border-radius: 3px; }
+.opt { font: 500 0.66rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 2px 5px; margin-left: 4px; vertical-align: 2px; }
+code { font-family: var(--font-mono); font-size: 0.88em; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+</style>
+
+<style>
+.flow { list-style: none; padding: 0; counter-reset: step; display: grid; gap: 8px; }
+.flow li { counter-increment: step; position: relative; padding-left: 34px; font-size: 0.95rem; }
+.flow li::before { content: counter(step); position: absolute; left: 0; top: 1px; width: 22px; height: 22px; border-radius: 50%; background: var(--danger-soft); color: var(--danger); font: 500 0.75rem/22px var(--font-mono); text-align: center; }
+.req > :not(.id) { grid-column: 2; min-width: 0; }
+.req.red { border-color: var(--danger); }
+.req.red .id { color: var(--danger); }
+.req .script { margin-block: 4px; }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="lede">
+      <div class="eyebrow">NetraCare capstone · Iteration 2 of 6</div>
+      <h1>Add Your First LLM Features</h1>
+      <p class="sub">Basic LangChain: prompt template, model call, output parser. A Fact of the Day for patients, appointment reasons, doctor summaries and the red-flag safety check.</p>
+      <p class="fiction">Read with the NetraCare Capstone Brief. NetraCare is a fictional clinic. All data is synthetic.</p>
+    </div>
+    <div class="snellen" aria-hidden="true"><div>N</div><div>E T</div><div>R A C</div><div>A R E</div></div>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="num">01</span><h2>Where you are</h2></div>
+    <p>You have the iteration 1 website: three roles, booking and cancelling, and every clinic rule checked in the backend. You have now learnt LLM APIs, prompt engineering and the basics of LangChain. This iteration adds the first AI to NetraCare: three small LLM features, and one of them is a safety check. The LLM never decides a booking. Your iteration 1 rules check stays exactly as it is.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">02</span><h2>Time and how to work</h2></div>
+    <div class="budget">
+      <div><b>~3¼ hrs</b><span>Total, for a beginner using agentic coding</span></div>
+      <div><b>25 min</b><span>Set up LangChain and your API key, load data pack 2</span></div>
+      <div><b>20 min</b><span>Appointment reason and doctor notes</span></div>
+      <div><b>20 min</b><span>Fact of the Day with Refresh</span></div>
+      <div><b>45 min</b><span>Red-flag check: build it, try the sample reasons, tune the prompt</span></div>
+      <div><b>45 min</b><span>Doctor summary and its prompt</span></div>
+      <div><b>40 min</b><span>Run the checks by hand and review the code</span></div>
+    </div>
+    <div class="own">
+      <h3>Use agentic coding, and own the result</h3>
+      <p>Keep working with Claude Code or Cursor. Let the AI write most of the code, and spend your time on the prompts and on understanding the flow. You must be able to explain it in the final demo.</p>
+      <ul>
+        <li><b>Understand the high-level flow:</b> what happens from a doctor clicking a patient to a summary on the screen. What goes into the prompt, what comes back, and where it is shown.</li>
+        <li><b>Understand the important details:</b> exactly which data each prompt includes, how the output parser turns the reply into data your code can use, why the caveat comes from your code and not the LLM, and what the app does when an LLM call fails.</li>
+        <li><b>Read your prompts yourself.</b> The prompt is the part of the code that matters most in this iteration. Read every word of it and change it until the checks in section 09 pass.</li>
+        <li><b>Start with a short spec.</b> Give your AI tool this handout and the data pack 2 README, and ask it to plan before it codes.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">03</span><h2>What you'll build</h2></div>
+    <p>Your iteration 1 website, plus an LLM for three jobs: a Fact of the Day for patients, a safety check on every booking, and a summary for doctors.</p>
+    <div class="roles3">
+      <div><h3>Patient</h3><ul>
+        <li>See a Fact of the Day about eye health on login, with the caveat "General information, not medical advice"</li>
+        <li>Click Refresh to get a new fact</li>
+        <li>Give a reason when booking an appointment</li>
+        <li>See the emergency response if the reason is a red flag</li>
+      </ul></div>
+      <div><h3>Staff</h3><ul>
+        <li>Enter the reason when booking for a patient</li>
+        <li>See urgent cases at the top of the Staff view, and mark them seen</li>
+        <li>See an Urgent tag on red-flag appointments</li>
+      </ul></div>
+      <div><h3>Doctor</h3><ul>
+        <li>Write a note when marking a visit completed</li>
+        <li>Open a patient from their schedule and see an AI summary of the profile, today's reason and past notes from all doctors</li>
+        <li>See the full past notes below the summary</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">04</span><h2>Requirements</h2></div>
+    <div class="reqs">
+      <div class="req"><span class="id">R1</span><h3>Load data pack 2</h3>
+        <ul><li>Add a <code>reason</code> and a <code>doctor_note</code> to appointments, and a profile (general health, allergies) to patients.</li><li>Load <code>past_visits.csv</code> as completed appointments and <code>patient_profiles.csv</code> into the profiles. Keep loading data pack 1 as before.</li></ul>
+        <p class="check"><b>Check:</b> Asha Verma (P01) has 3 completed visits, with Dr. Shah and Dr. Rao, and can book a Retina follow-up with Dr. Shah.</p></div>
+
+      <div class="req"><span class="id">R2</span><h3>Doctor notes</h3>
+        <ul><li>When a doctor marks a visit completed, they write a short note. The note is required.</li><li>Notes are saved with the appointment and feed the summary in R6.</li></ul>
+        <p class="check"><b>Check:</b> marking a visit completed with an empty note is refused, and a saved note shows up in that patient's history.</p></div>
+
+      <div class="req"><span class="id">R3</span><h3>Appointment reason</h3>
+        <ul><li>The booking form asks "What is the reason for your visit?". The reason is required, up to 300 characters, and saved with the appointment.</li><li>Staff enter it too when they book for a patient. Staff and the doctor can see it; other patients cannot.</li></ul>
+        <p class="check"><b>Check:</b> a booking without a reason is refused, and the doctor sees the reason in their schedule.</p></div>
+
+      <div class="req red"><span class="id">R4</span><h3>Red-flag check with the LLM</h3>
+        <ul>
+          <li><b>What a red flag is:</b> a symptom that may mean the patient could lose sight if they wait for a normal appointment. They must be told to come now. NetraCare uses the 5 categories in the brief (section 07):</li>
+        </ul>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Category</th><th>Red flag when the patient describes</th><th>Not a red flag</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">sudden_vision_loss</td><td>Vision dropping or going dark suddenly (within minutes, hours or a day), in one or both eyes. "I suddenly can't see from my left eye", "everything went dark"</td><td>Blurring that came on slowly over months or years</td></tr>
+            <tr><td class="mono">curtain_or_shadow</td><td>A curtain, veil or shadow coming over or moving across part of the vision. "Like a blind pulled down over half my sight"</td><td>A small fixed spot the patient has had for years</td></tr>
+            <tr><td class="mono">floaters_or_flashes</td><td>A sudden shower of new floaters (dots, spots, cobwebs), or flashes or sparks of light. "Lots of new floaters since yesterday"</td><td>A few old floaters that haven't changed</td></tr>
+            <tr><td class="mono">chemical_or_injury</td><td>Any chemical in the eye (cleaner, bleach, acid, cement) or any injury: hit, poked, or something flew in. "Floor cleaner went in my eye"</td><td>Mild irritation from dust or smoke that has settled</td></tr>
+            <tr><td class="mono">severe_pain_headache_haloes</td><td>Severe eye pain, especially with headache, feeling sick or vomiting, or haloes and rainbows around lights. "My eye is throbbing and I threw up"</td><td>Mild itching, grittiness, dryness or tired eyes</td></tr>
+          </tbody>
+        </table></div>
+        <ul>
+          <li>The patient must describe it as happening now. "No sudden loss of vision" is not a red flag.</li>
+          <li>When the model is unsure, it should flag. A false alarm costs Staff one click; a missed red flag is never acceptable.</li>
+          <li>Write one LangChain chain, <code>check_red_flags(text)</code>, in its own file: a prompt template, the chat model at temperature 0, and an output parser.</li>
+          <li>The prompt explains what a red flag is and describes the 5 categories above, so the model can decide whether the reason describes one of them in any wording.</li>
+          <li>The output parser returns data, not free text: <code>red_flag</code> (true or false), <code>category</code> (one of the 5 examples, or none) and a one-line <code>why</code>. A Pydantic model with <code>PydanticOutputParser</code>, or <code>with_structured_output</code>, both work.</li>
+        </ul>
+        <ol class="flow">
+          <li>A patient or Staff clicks Book. Before any clinic rule is checked, the backend runs <code>check_red_flags</code> on the reason.</li>
+          <li>On a red flag, the screen shows the emergency response first, in red, word for word:</li>
+        </ol>
+        <p class="script">What you describe needs urgent attention. Please come to the clinic now or go to the nearest emergency department. Our staff have been notified.</p>
+        <ol class="flow" start="3" style="counter-reset: step 2">
+          <li>The backend saves an <b>urgent case</b>: patient, reason text, category, the model's <code>why</code> and the time. Urgent cases sit at the top of the Staff view in red until Staff click "Mark seen".</li>
+          <li>The booking then goes through the normal rules check. If it is booked, it carries an <b>Urgent</b> tag for Staff and the doctor. If it is refused, the urgent case still stands.</li>
+        </ol>
+        <ul>
+          <li><b>If the check fails</b> (timeout, API error, or a reply the parser can't read), never book silently. Refuse the booking with "We couldn't check your reason just now. Please try again, or call the clinic if it's urgent."</li>
+          <li>Iteration 3's chat and iteration 4's agent call this same function, so keep it on its own.</li>
+        </ul>
+        <p class="check"><b>Check:</b> the red-flag rows in section 09 behave as described. <code>reason_samples.csv</code> has 35 more reasons to try if you want to test further.</p></div>
+
+      <div class="req"><span class="id">R5</span><h3>Fact of the Day</h3>
+        <ul><li>When a patient logs in, show a "Fact of the Day" card with one general fact about eye health, in no more than two sentences, from the LLM.</li><li>A <b>Refresh</b> button on the card calls the LLM again and shows a new fact. Send the current fact in the prompt and ask for a different one, so the same fact doesn't come back.</li><li>The prompt asks for general, friendly facts only: no conditions to look out for, no treatments, medicines or product names.</li><li>Your code adds the caveat "General information, not medical advice" under every fact. Never ask the LLM to write it.</li></ul>
+        <p class="check"><b>Check:</b> each patient login shows a fact with the caveat under it, Refresh shows a different fact, and no fact gives advice to treat anything.</p></div>
+
+      <div class="req"><span class="id">R6</span><h3>Doctor summary</h3>
+        <ul>
+          <li>When a doctor opens a patient from their schedule, show a short summary of no more than 120 words, written by the LLM.</li>
+          <li><b>Into the prompt:</b> the profile (age from year of birth, general health, allergies), today's appointment reason, and every completed visit from all doctors (date, doctor, speciality, note), newest first.</li>
+          <li><b>Prompt rules:</b> only restate what is recorded. It may repeat a diagnosis or treatment a doctor recorded, and should say which doctor. It never adds its own diagnosis, guess, risk or advice. If something isn't recorded, it leaves it out.</li>
+          <li>Label it "AI summary of recorded notes. Check the notes below." and show the full past notes underneath.</li>
+          <li>Only a doctor can get a summary. The backend checks the role.</li>
+        </ul>
+        <p class="check"><b>Check:</b> the summary rows in section 09 behave as described.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">05</span><h2>Rules and safety in this iteration</h2></div>
+    <p>This iteration delivers the brief's red-flag rule (section 07) and starts two more targets from section 09: <b>100% of red-flag messages trigger the emergency response</b>, and <b>0 answers that name a condition or suggest treatment</b>. Iteration 1's target still holds: <b>0 bookings that break a clinic rule</b>.</p>
+    <div class="safety">
+      <h2>Safety rules</h2>
+      <ul>
+        <li>Red flags always get the emergency response before any booking, and appear as urgent on the Staff view.</li>
+        <li>Nothing a patient sees names a condition or suggests treatment. That covers the Fact of the Day now, and the chat in later iterations.</li>
+        <li>The doctor summary is for doctors only. It may repeat what a doctor recorded, but it never adds its own diagnosis or advice.</li>
+        <li>The LLM never decides a booking. It only flags a reason as urgent. Every booking still goes through the iteration 1 rules check.</li>
+        <li>If the red-flag check can't run, no booking is made.</li>
+      </ul>
+    </div>
+    <ul>
+      <li>Patients only ever see their own appointments and details. A patient cannot get a summary or another patient's notes, even by calling the API directly.</li>
+      <li>Use only the data packs. Never send real patient information to an LLM API.</li>
+      <li>Keep your API key in a <code>.env</code> file listed in <code>.gitignore</code>. Commit a <code>.env.example</code> with the key left blank.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">06</span><h2>Data pack</h2></div>
+    <p>Download <code>netracare-data-pack-02.zip</code> from your instructor. Keep using data pack 1; this pack adds to it with the same doctor and patient IDs. Its README explains every file and the short forms doctors use in their notes.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>File</th><th>Use</th></tr></thead>
+      <tbody>
+        <tr><td class="name mono">past_visits.csv</td><td>27 completed visits for 13 patients, each with the patient's reason and a realistic doctor note</td></tr>
+        <tr><td class="name mono">patient_profiles.csv</td><td>General health and allergies for all 25 patients</td></tr>
+        <tr><td class="name mono">reason_samples.csv</td><td>35 appointment reasons labelled red flag yes or no, with the category, to prove your red-flag check</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">07</span><h2>Technology choices</h2></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Part</th><th>Use</th></tr></thead>
+      <tbody>
+        <tr><td class="name">LLM framework</td><td>LangChain, basics only <b>(required)</b>: a prompt template, a chat model and an output parser, joined into one chain with <code>|</code>. Use a string parser for the Fact of the Day and the summary, and a Pydantic parser for the red-flag check. No agents, memory or RAG yet.</td></tr>
+        <tr><td class="name">LLM provider</td><td>Any you have access to, such as OpenAI, Anthropic, Google Gemini or Groq, or a local model with Ollama. Read the provider and model name from <code>.env</code>.</td></tr>
+        <tr><td class="name">Everything else</td><td>As in iteration 1.</td></tr>
+        <tr><td class="name">Testing</td><td>By hand, using the checks in section 09. Automated tests are a stretch goal.</td></tr>
+      </tbody>
+    </table></div>
+    <p>Put all LLM code in one module, for example <code>llm.py</code>, with one chain each for the Fact of the Day, the red-flag check and the summary. Give each call a timeout. If the fact or summary call fails, the app keeps working: the card shows a fixed fallback fact, and the summary says "Summary unavailable. See the notes below." If the red-flag call fails, no booking is made (R4).</p>
+    <p>Suggested new endpoints (adapt as you like): <code>GET /fact-of-the-day</code> (with an optional <code>previous</code> fact for Refresh), <code>GET /doctor/patients/{id}/summary</code>, <code>POST /appointments/{id}/complete</code> (with the note), <code>GET /urgent-cases</code>, <code>POST /urgent-cases/{id}/seen</code>.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">08</span><h2>Suggested steps</h2></div>
+    <ol>
+      <li>Ask your AI tool to read this handout and the data pack 2 README, and write a short plan: new columns and tables, the LLM module with its three chains, and the new endpoints.</li>
+      <li>Load data pack 2 and add the reason and the doctor note (R1 to R3).</li>
+      <li>Set up LangChain with your key in <code>.env</code>, and build the Fact of the Day first, because it is the simplest chain (R5).</li>
+      <li>Build <code>check_red_flags</code>. Try it on the reasons in section 09 and tune the prompt, then wire it into booking and the Staff view (R4).</li>
+      <li>Build the summary (R6). Try it on the patients in section 09 and change the prompt until every check passes.</li>
+      <li>Work through every check in section 09 and fix anything that doesn't behave.</li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">09</span><h2>Done when</h2></div>
+    <p>Try each of these by hand in your app. To open a patient as a doctor, first book them with that doctor on a date in the next few weeks.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Try this</th><th>Expected</th></tr></thead>
+      <tbody>
+        <tr><td>Log in as any patient</td><td>A Fact of the Day card with a short general eye fact and "General information, not medical advice" under it</td></tr>
+        <tr><td>Click Refresh on the card</td><td>A different fact, still with the caveat</td></tr>
+        <tr><td>Book with the reason "Routine eye test and new glasses"</td><td>Booked, no emergency response</td></tr>
+        <tr><td>Book with one reason from each category: "I suddenly can't see from my left eye", "It feels like a curtain is coming down over my right eye", "Seeing flashes of light and lots of floaters since yesterday", "Got floor cleaner in my eye while mopping", "Severe eye pain with headache and I feel sick"</td><td>Each one: emergency response first, an urgent case with the right category at the top of the Staff view</td></tr>
+        <tr><td>Book with "No sudden loss of vision but I want a check-up" and with "Gradual loss of vision over two years"</td><td>Booked, no emergency response</td></tr>
+        <tr><td>Book a red-flag reason with Dr. Rao on a Thursday morning</td><td>Emergency response and an urgent case; the booking itself is refused: surgery session</td></tr>
+        <tr><td>As Staff, mark an urgent case seen</td><td>It leaves the urgent list</td></tr>
+        <tr><td>As a doctor, mark a visit completed with no note</td><td>Refused: a note is required</td></tr>
+        <tr><td>Book Lakshmi Nair (P03) for a Glaucoma follow-up with Dr. Iyer, then open her as Dr. Iyer</td><td>Summary has today's reason, glaucoma on latanoprost (Dr. Iyer), early cataract (Dr. Rao) and her sulfa allergy, and nothing that isn't in her notes</td></tr>
+        <tr><td>Book Sunita Rao (P15) with Dr. Iyer, then open her as Dr. Iyer</td><td>Summary says latanoprost was started and timolol avoided because of asthma, and adds no warning or advice of its own</td></tr>
+        <tr><td>Book a patient with no past visits, such as Aditya Bose (P20), and open them</td><td>Summary says there are no previous visits on record, and invents nothing</td></tr>
+        <tr><td>As a patient, call the summary endpoint directly</td><td>Refused</td></tr>
+        <tr><td>Remove your API key and restart</td><td>Fact of the Day and summary show their fallback messages; booking is refused with "We couldn't check your reason just now"</td></tr>
+      </tbody>
+    </table></div>
+    <ul class="done-list">
+      <li>Every check above behaves as expected.</li>
+      <li>Every iteration 1 check still passes.</li>
+      <li>Your API key is not in your repository.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">10</span><h2>What to submit</h2></div>
+    <ul>
+      <li>Repository link, with a README that explains how to run the app and set up the API key, plus a <code>.env.example</code>.</li>
+      <li>A demo video of 3 minutes or less: the Fact of the Day with Refresh, one red-flag booking that shows on the Staff view, and one doctor summary.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">11</span><h2>Stretch goals</h2></div>
+    <ul>
+      <li><b>Automated red-flag tests:</b> a pytest file that runs <code>check_red_flags</code> on all 35 rows of <code>reason_samples.csv</code> and checks the answer and the category. <span class="opt">optional</span></li>
+      <li><b>Write your own hard cases:</b> add 10 reasons of your own, such as Hindi or Hinglish wordings, typos or very long messages, and make sure the check still catches every red flag. <span class="opt">optional</span></li>
+      <li><b>Structured summary:</b> use a Pydantic output parser for the summary too, with separate fields (today, background, past visits) shown as sections. <span class="opt">optional</span></li>
+      <li><b>Visit dates in the summary:</b> each line ends with the date of the visit it came from, so the doctor can check it quickly. <span class="opt">optional</span></li>
+      <li>Stream the summary onto the doctor's screen as it is written <span class="opt">optional</span></li>
+      <li>Save the Fact of the Day for each patient, so login is instant; Refresh replaces it <span class="opt">optional</span></li>
+      <li>Switch LLM provider by changing only <code>.env</code>, and compare two models on the same patient <span class="opt">optional</span></li>
+      <li>A badge on the Staff view with the number of unseen urgent cases <span class="opt">optional</span></li>
+    </ul>
+  </section>
+
+  <footer>Next: Iteration 3 adds a patient chat that answers from clinic documents with citations and routes patients to the right speciality. The red-flag check you built today runs before every chat answer.</footer>
+</div>
+
+</body>
+</html>

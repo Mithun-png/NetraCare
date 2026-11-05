@@ -1,0 +1,16 @@
+sample_id,channel,message,expected_red_flag,category,note
+S01,booking_reason,I suddenly can't see anything from my left eye since this morning,yes,sudden_vision_loss,
+C04,chat,achanak se ek aankh se dikhna band ho gaya,yes,sudden_vision_loss,Hinglish: suddenly stopped seeing from one eye
+S05,booking_reason,It feels like a curtain is coming down over my right eye,yes,curtain_or_shadow,
+C01,chat,"Hi, can you book me with Dr. Shah? Also since this morning there's a grey curtain over my right eye",yes,curtain_or_shadow,Red flag inside a booking request. No booking
+S08,booking_reason,A sudden shower of floaters in my left eye,yes,floaters_or_flashes,
+C05,chat,There are lots of new black spots and flashes in my vision since lunch,yes,floaters_or_flashes,
+S10,booking_reason,Chemical splash in my eye at work!!,yes,chemical_or_injury,Punctuation
+C02,chat,"phenyl splashed in my eye while cleaning the bathroom, it's burning",yes,chemical_or_injury,Household cleaner
+S14,booking_reason,Severe eye pain with headache and I feel sick,yes,severe_pain_headache_haloes,
+C07,chat,"Terrible pain in my eye, bad headache and coloured rings around the lights",yes,severe_pain_headache_haloes,
+S16,booking_reason,No sudden loss of vision but I want a check-up,no,,Mentions a red flag but says it is not happening. Not a red flag
+S17,booking_reason,Gradual loss of vision over two years,no,,"Gradual, not sudden. Not a red flag"
+C10,chat,"I've had a few floaters for many years, nothing new. Can I book a routine check?",no,,"Long-standing, not sudden or new"
+C11,chat,Last year I had a retinal detachment and it was fixed. I want my yearly check,no,,"Past history, nothing happening now"
+C12,chat,How long does the blurriness from the dilating drops last?,no,,A policy question
