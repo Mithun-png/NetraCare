@@ -41,8 +41,9 @@ RED_FLAG_PATTERNS = [
     (
         "curtain_or_shadow",
         [
-            r"\bcurtain\s+(is\s+)?coming\s+down\b",
-            r"\bcurtain\s+across\s+vision\b",
+            r"\bcurtain\s+(is\s+|has\s+)?(coming|came|drawn|pulled)\s+down\b",
+            r"\bcurtain\s+(over|across)\b",
+            r"\bcurtain\b.*\b(coming|came|down|shadow|vision|eye)\b",
             r"\bdark\s+shadow\s+moving\s+across\b",
             r"\bshadow\s+over\s+(half\s+of\s+)?my\s+(sight|vision|eye)\b",
             r"\bpulled\s+a\s+blind\s+down\b",

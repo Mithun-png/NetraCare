@@ -45,3 +45,9 @@ def check_patient_facing_output(text: str) -> Tuple[bool, str]:
             return False, SAFE_REFUSAL
 
     return True, text
+
+def sanitize_clinical_output(text: str) -> str:
+    """Sanitize patient-facing text, ensuring zero diagnosis or treatment advice."""
+    is_safe, sanitized = check_patient_facing_output(text)
+    return sanitized
+

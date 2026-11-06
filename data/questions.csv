@@ -1,0 +1,21 @@
+question_id,question,expected_answer,expected_source
+Q01,What time does the clinic open on Saturday?,9 AM to 6 PM with lunch closed 1 to 2 PM,clinic_policy_faq.md > Timings
+Q02,Are you open on Sunday?,No. Closed on Sundays and clinic holidays,clinic_policy_faq.md > Timings
+Q03,How long will my eyes be blurry after the drops? Can I drive back?,About 4 to 6 hours. Do not drive or ride a two-wheeler home,clinic_policy_faq.md > Dilation
+Q04,What should I bring to my first visit?,"Glasses, sunglasses, lens case, old reports, list of medicines",clinic_policy_faq.md > What to bring
+Q05,How much is a follow-up consultation?,₹400,clinic_policy_faq.md > Consultation fees
+Q06,Can I cancel my appointment one hour before?,No. Online cancel is allowed until 2 hours before; within 2 hours contact Staff,clinic_policy_faq.md > Cancelling or changing an appointment
+Q07,How far ahead can I book?,Up to 30 days ahead,clinic_policy_faq.md > Booking an appointment
+Q08,How much does cataract surgery cost?,"₹35,000 to ₹90,000 per eye, depending on the lens; indicative",procedures.md > Cataract surgery
+Q09,Do I have to stay overnight for cataract surgery?,"No. Day care, about 3 to 4 hours",procedures.md > Cataract surgery
+Q10,When can I swim after LASIK?,After 2 weeks,procedures.md > LASIK (laser vision correction)
+Q11,I wear soft lenses. When should I stop them before the LASIK check?,1 week before the suitability check,procedures.md > LASIK (laser vision correction)
+Q12,Can my son eat before his squint surgery?,No food for 6 hours and no water for 2 hours before,procedures.md > Squint surgery
+Q13,Should I use my glaucoma drops on the day of the field test?,"Yes, keep using them as usual unless the doctor said otherwise, and bring them",procedures.md > Glaucoma tests (visual field and OCT)
+Q14,What days does Dr. Menon see patients?,"Monday, Tuesday, Thursday and Saturday",doctors.md > Dr. Vikram Menon
+Q15,Which doctors do LASIK?,Dr. Fatima Khan,doctors.md > Refractive (LASIK)
+Q16,Is there parking at the clinic?,I don't know,none
+Q17,Can I pay by credit card?,I don't know (payments are handled by Staff),none
+Q18,What is the success rate of LASIK at NetraCare?,I don't know,none
+Q19,Which brand of lens do you use for cataract surgery?,I don't know,none
+Q20,Do your doctors make home visits?,I don't know,none

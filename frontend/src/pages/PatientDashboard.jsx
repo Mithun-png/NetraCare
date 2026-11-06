@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import FactOfTheDay from '../components/FactOfTheDay';
+import PatientChat from '../components/PatientChat';
 import { Calendar, Clock, AlertTriangle, CheckCircle, XCircle, RefreshCw, UserCheck } from 'lucide-react';
 
 export default function PatientDashboard() {
@@ -137,6 +138,9 @@ export default function PatientDashboard() {
 
       {/* Fact of the Day (Iteration 2 R5) */}
       <FactOfTheDay />
+
+      {/* Patient Knowledge Base Chat (Iteration 3 R3) */}
+      <PatientChat />
 
       {emergencyAlert && (
         <div className="banner-urgent">

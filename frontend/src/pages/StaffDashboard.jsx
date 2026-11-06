@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import SearchDebugger from '../components/SearchDebugger';
 import { AlertTriangle, Check, X, ShieldAlert, Plus, Search, Filter, RefreshCw } from 'lucide-react';
 
 export default function StaffDashboard() {
@@ -228,6 +229,9 @@ export default function StaffDashboard() {
           </div>
         </div>
       )}
+
+      {/* RAG Knowledge Base Search Debugger (Iteration 3 R2) */}
+      <SearchDebugger />
 
       {/* Appointment Roster with Filters */}
       <div className="card">

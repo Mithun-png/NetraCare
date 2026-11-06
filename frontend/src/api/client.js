@@ -57,6 +57,8 @@ export const api = {
   rescheduleMyAppointment: (id, payload) =>
     request(`/patient/appointments/${encodeURIComponent(id)}/reschedule`, { method: 'POST', body: JSON.stringify(payload) }),
   getPatientProfile: () => request('/patient/profile'),
+  patientChat: (message, history = []) =>
+    request('/patient/chat', { method: 'POST', body: JSON.stringify({ message, history }) }),
 
   // Doctor
   getDoctorSchedule: (date) => request(date ? `/doctor/schedule?date=${encodeURIComponent(date)}` : '/doctor/schedule'),
@@ -82,5 +84,6 @@ export const api = {
   decideApproval: (id, decision, reason) =>
     request(`/staff/approvals/${encodeURIComponent(id)}/decide`, { method: 'POST', body: JSON.stringify({ decision, reason }) }),
   searchPatients: (q) => request(`/staff/patients${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+  getSearchDebug: (q) => request(`/staff/search-debug?q=${encodeURIComponent(q)}`),
 };
 

@@ -13,6 +13,7 @@ from app.api.public import router as public_router
 from app.api.patient import router as patient_router
 from app.api.doctor import router as doctor_router
 from app.api.staff import router as staff_router
+from app.api.chat import router as chat_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -47,6 +48,7 @@ app.include_router(auth_router, prefix="/api/v1")
 app.include_router(patient_router, prefix="/api/v1")
 app.include_router(doctor_router, prefix="/api/v1")
 app.include_router(staff_router, prefix="/api/v1")
+app.include_router(chat_router, prefix="/api/v1")
 
 @app.get("/api/v1/health")
 def health_check():
