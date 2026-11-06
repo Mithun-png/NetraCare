@@ -383,6 +383,11 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
     elif "menon" in q_lower:
         doc_id = "D5"
 
+    # 0. Check for non-eye problems (R30)
+    non_eye_keywords = ["back hurt", "back pain", "stomach", "tooth", "knee pain", "chest pain"]
+    if any(k in q_lower for k in non_eye_keywords):
+        return AIMessage(content="NetraCare is a specialized eye hospital and only looks after eyes. We do not treat non-eye issues such as back pain. Please consult a general physician.")
+
     # Specific rule checks before slots:
     # A. Active booking in speciality exists
     active_in_spec = db.query(Appointment).filter(

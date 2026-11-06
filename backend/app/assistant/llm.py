@@ -12,6 +12,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
 from app.config import settings
 from app.safety.red_flags import check_red_flags as deterministic_check_red_flags, EMERGENCY_RESPONSE_TEXT
+from app.observability.opik_setup import track_op, get_opik_tracer
 
 # Fixed clinical fallback facts (curated, zero medical claims or advice)
 FALLBACK_FACTS = [
@@ -47,6 +48,7 @@ def get_llm(temperature: float = 0.0):
         return None
 
 # 1. Fact of the Day Chain
+@track_op(name="fact_of_the_day", project_name="netracare-dev", tags=["fact", "patient"])
 def get_fact_of_the_day(previous: Optional[str] = None) -> Dict[str, str]:
     """Generate a friendly, general eye fact. Strictly avoids condition names or treatment advice."""
     llm = get_llm(temperature=0.7)
@@ -90,6 +92,7 @@ def get_fact_of_the_day(previous: Optional[str] = None) -> Dict[str, str]:
     }
 
 # 2. Red-Flag Check Chain
+@track_op(name="check_red_flags", project_name="netracare-dev", tags=["red_flag", "patient"])
 def check_red_flags_with_llm(text: str) -> Dict[str, Any]:
     """Check text against the 5 red-flag categories using deterministic regex and optional LLM classification."""
     # First: Deterministic check (instant, reliable, zero network latency)
@@ -147,6 +150,7 @@ def check_red_flags_with_llm(text: str) -> Dict[str, Any]:
     }
 
 # 3. Doctor Summary Chain
+@track_op(name="doctor_summary", project_name="netracare-dev", tags=["summary", "doctor"])
 def generate_doctor_summary(
     patient_name: str,
     age: Optional[int],

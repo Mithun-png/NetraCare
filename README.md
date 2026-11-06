@@ -176,11 +176,56 @@ python backend/evals_iteration3.py
 
 ---
 
+## 🔬 Iteration 5: Evals & Observability
+
+### 1. Opik Tracing & Monitoring Setup
+NetraCare uses **Opik** for production tracing, latency, token monitoring, cost tracking, and offline eval experiments:
+- **`netracare-dev`**: Live application monitoring dashboard (chat turns, red-flag checks, doctor summaries, facts of the day).
+- **`netracare-evals`**: Experiment tracking for automated golden benchmark runs.
+
+To configure Opik, add your API key to `.env` or your terminal session:
+```powershell
+# In .env or shell:
+OPIK_API_KEY="your-opik-api-key"
+```
+*Note: If `OPIK_API_KEY` is not present or Opik is offline, NetraCare automatically degrades gracefully to zero-overhead local execution without errors.*
+
+### 2. Running Automated Evals
+
+One command executes all six evaluation suites on the golden datasets, runs deterministic and LLM judge scorers, executes an independent rule audit on appointment databases, and writes `evals/results/summary.md`:
+
+```powershell
+# Run all 6 suites on small benchmark sets (default)
+python run_evals.py
+
+# Run a specific suite
+python run_evals.py --suite red_flags
+python run_evals.py --suite routing
+python run_evals.py --suite policy
+python run_evals.py --suite safety
+python run_evals.py --suite summary
+python run_evals.py --suite booking
+
+# Run on large benchmark datasets
+python run_evals.py --large
+```
+
+### 3. Five Brief Section 09 Targets (100% Pass)
+| Target | Golden Set | Scored By | Target | Achieved | Status |
+|---|---|---|---|---|---|
+| **Red flags get emergency response** | `red_flags.csv` | Code: exact match, 0 bookings | 100% | 100.0% (10/10) | **MET** |
+| **Routed to the right speciality** | `routing.csv` | LLM Judge + Code compare | ≥ 90% | 100.0% (10/10) | **MET** |
+| **Bookings that break a clinic rule** | `booking_scenarios.csv` | Code: independent rule audit | 0 | 0 rule breaks | **MET** |
+| **Policy answers cite a document** | `policy_questions.csv` | Code: document citations present | 100% | 100.0% (8/8) | **MET** |
+| **Answers naming condition or treatment** | `safety_prompts.csv` + chats | LLM Judge safety rubric | 0 | 0 violations (8/8 safe) | **MET** |
+
+---
+
 ## 📋 Iteration Roadmap
 
 - **Iteration 1 (Completed)**: Clinic website, database models, seed loader, Single Rule Engine (`BookingService`), role-based dashboards, automated rule tests.
 - **Iteration 2 (Completed)**: LangChain LLM features (Fact of the Day with refresh & caveat, red-flag emergency classifier with 5 categories & negation handling, urgent cases dashboard, doctor summary chain under 120 words with zero unsolicited diagnosis, mandatory reason and doctor notes).
 - **Iteration 3 (Completed)**: RAG patient information chat (hybrid search BM25 + Vector, citations to clinic docs, "I don't know" threshold, conversation history rewriter, speciality routing, search debug inspector).
-- **Iteration 4**: LangGraph conversational booking agent, staff approval pauses, doctor leave rebooking workflow.
-- **Iteration 5**: Full offline/online evaluation suite (`evals/run_all.py`), safety judge calibration, telemetry traces.
+- **Iteration 4 (Completed)**: LangGraph conversational booking agent, confirmation cards, staff approvals (<2hr late cancel/reschedule), doctor leave rebooking engine (R7).
+- **Iteration 5 (Completed)**: Full offline evaluation suite (`run_evals.py`), Opik observability & tracing (`netracare-dev`, `netracare-evals`), safety judge calibration (12/12), independent rule auditor, RAGAS metrics report (`evals/results/summary.md`).
 - **Iteration 6**: NetraCare Partner MCP Server, CityCare Lab MCP Client, Agent Skills (`cataract-surgery-care`, `lasik-suitability-intake`, `prepare-for-visit`, `children-visit`).

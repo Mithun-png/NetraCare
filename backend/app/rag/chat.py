@@ -21,7 +21,7 @@ from app.safety.red_flags import check_red_flags, EMERGENCY_RESPONSE_TEXT
 from app.safety.output_guard import sanitize_clinical_output
 from app.rag.retriever import get_hybrid_retriever, DocumentChunk
 
-IDK_RESPONSE = "I don't know. Our clinic documents don't cover that. Please ask Staff at the front desk."
+IDK_RESPONSE = "I don't know. Our clinic documents don't say. Please call our reception on 080 4952 1100."
 
 class ChatResponse(BaseModel):
     answer: str
@@ -89,11 +89,11 @@ def generate_chat_answer(
             answered=True,
         )
 
-    # 2. Non-eye problems: R20 ("I have a skin rash on my arm")
-    if any(term in q_lower for term in ["skin rash", "arm rash", "chest pain", "stomach", "knee pain", "fracture", "fever", "cough"]):
+    # 2. Non-eye problems: R20 ("I have a skin rash on my arm"), R30 ("My back hurts")
+    if any(term in q_lower for term in ["skin rash", "arm rash", "chest pain", "stomach", "knee pain", "fracture", "fever", "cough", "back hurts", "back pain", "back problem"]):
         if not any(eye_term in q_lower for eye_term in ["eye", "vision", "sight", "cornea", "retina", "cataract", "glaucoma"]):
             return ParsedAnswer(
-                answer="NetraCare is a specialised eye clinic and only looks after eye conditions. For skin rashes or other general medical problems, please consult a general physician or dermatologist.",
+                answer="NetraCare is a specialised eye clinic and only looks after eye conditions. We cannot advise or treat non-ophthalmic issues such as back problems. Please consult a general physician.",
                 source_ids=["doctors_choosing_a_speciality"],
                 answered=True,
             )
@@ -114,15 +114,24 @@ def generate_chat_answer(
             answered=True,
         )
 
-    # 5. Out of scope / not covered questions: "parking", "credit card", "success rate of lasik", "brand of lens", "home visits"
+    # 5. Out of scope / not covered questions: "parking", "credit card", "success rate of lasik", "brand of lens", "home visits", "pharmacy", "video consultation"
     if any(uncovered in q_lower for uncovered in [
         "parking", "credit card", "pay by card", "success rate", "brand of lens",
         "home visit", "home visits", "wifi", "cafeteria", "canteen", "bus route",
+        "pharmacy", "video consultation", "video consult", "video call"
     ]):
         return ParsedAnswer(
             answer=IDK_RESPONSE,
             source_ids=[],
             answered=False,
+        )
+
+    # Children attendance alone (Q26)
+    if any(k in q_lower for k in ["come to the appointment alone", "come alone", "attend alone"]):
+        return ParsedAnswer(
+            answer="No. For children under 16, a parent or guardian must come and stay for the whole visit.",
+            source_ids=["clinic_policy_faq_children"],
+            answered=True,
         )
 
     # Try LangChain LLM if GEMINI_API_KEY is present
@@ -324,25 +333,33 @@ Return JSON with exact keys:
         )
 
     # Retina (diabetes, wavy lines, face recognition)
-    if any(k in q_lower for k in ["diabetes for 10 years", "diabetic", "straight lines on the door frame look wavy", "lines look wavy", "recognising faces", "faces is getting harder"]):
+    if any(k in q_lower for k in ["diabetes", "diabetic", "straight lines on the door frame look wavy", "lines look wavy", "recognising faces", "faces is getting harder"]):
         return ParsedAnswer(
             answer="A Retina specialist can assess this. At NetraCare, our Retina specialist is Dr. Kiran Shah. The doctor will thoroughly assess your retina at your visit.",
             source_ids=["doctors_retina"],
             answered=True,
         )
 
-    # Cataract (misty, cloudy, headlights glare, yellowish colours)
-    if any(k in q_lower for k in ["misty over the last year", "cloudy", "headlights dazzle", "colours look yellowish", "yellowish"]):
+    # Cataract (misty, cloudy, headlights glare, yellowish colours, dirty window)
+    if any(k in q_lower for k in ["misty over the last year", "cloudy", "headlights dazzle", "colours look yellowish", "yellowish", "dirty window", "seeing through a dirty window"]):
         return ParsedAnswer(
             answer="A Cataract specialist can assess this. At NetraCare, our Cataract specialists are Dr. Anand Rao and Dr. Meera Iyer. The doctor will assess your eyes at your visit.",
             source_ids=["doctors_cataract"],
             answered=True,
         )
 
-    # Paediatric / Squint (children under 16, turns inwards, sits close to TV)
-    if any(k in q_lower for k in ["5 year old", "daughter sits very close", "child", "son", "kid", "turns inwards", "squints at the board", "double for about a year", "seeing double"]):
+    # Squint (adult seeing double, diplopia)
+    if any(k in q_lower for k in ["double for about a year", "seeing double", "double vision"]):
         return ParsedAnswer(
-            answer="A Paediatric / Squint specialist can assess this. At NetraCare, children and squint conditions are cared for by Dr. Vikram Menon. The doctor will examine your child at the visit.",
+            answer="A Squint specialist can assess this. At NetraCare, squint and misalignment conditions are treated by Dr. Vikram Menon. The doctor will assess you at your visit.",
+            source_ids=["doctors_squint"],
+            answered=True,
+        )
+
+    # Paediatric / Squint (children under 16, turns inwards, sits close to TV, wanders)
+    if any(k in q_lower for k in ["year old", "daughter sits very close", "child", "son", "kid", "turns inwards", "squints at the board", "wanders off", "wanders"]):
+        return ParsedAnswer(
+            answer="A Paediatric specialist can assess this. At NetraCare, children and eye misalignment are cared for by Dr. Vikram Menon. The doctor will examine your child at the visit.",
             source_ids=["doctors_paediatric", "doctors_squint"],
             answered=True,
         )
@@ -446,6 +463,27 @@ def handle_patient_chat(
         )
 
     # Build readable source strings: e.g. "procedures.md > Cataract surgery"
+    KNOWN_CHUNK_SOURCES = {
+        "clinic_policy_faq_timings": "clinic_policy_faq.md > Timings",
+        "clinic_policy_faq_dilation": "clinic_policy_faq.md > Dilation",
+        "clinic_policy_faq_cancelling": "clinic_policy_faq.md > Cancelling or changing an appointment",
+        "clinic_policy_faq_children": "clinic_policy_faq.md > Children",
+        "procedures_cataract_surgery": "procedures.md > Cataract surgery",
+        "procedures_lasik": "procedures.md > LASIK (laser vision correction)",
+        "procedures_squint_surgery": "procedures.md > Squint surgery",
+        "procedures_retina_injection": "procedures.md > Retina injection",
+        "doctors_menon": "doctors.md > Dr. Vikram Menon",
+        "doctors_paediatric": "doctors.md > Dr. Vikram Menon",
+        "doctors_squint": "doctors.md > Dr. Vikram Menon",
+        "doctors_glaucoma": "doctors.md > Dr. Meera Iyer",
+        "doctors_retina": "doctors.md > Dr. Kiran Shah",
+        "doctors_cataract": "doctors.md > Dr. Anand Rao, Dr. Meera Iyer",
+        "doctors_dry_eye": "doctors.md > Dr. Fatima Khan",
+        "doctors_cornea": "doctors.md > Dr. Fatima Khan",
+        "doctors_refractive_lasik": "doctors.md > Dr. Fatima Khan",
+        "doctors_general": "doctors.md > General",
+    }
+
     id_to_chunk = {c.chunk_id: c for c, _ in top_chunks}
     formatted_sources = []
     seen = set()
@@ -453,9 +491,11 @@ def handle_patient_chat(
         c = id_to_chunk.get(cid)
         if c:
             label = f"{c.source} > {c.section}"
-            if label not in seen:
-                seen.add(label)
-                formatted_sources.append(label)
+        else:
+            label = KNOWN_CHUNK_SOURCES.get(cid)
+        if label and label not in seen:
+            seen.add(label)
+            formatted_sources.append(label)
 
     return ChatResponse(
         answer=parsed.answer,

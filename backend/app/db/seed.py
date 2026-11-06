@@ -29,9 +29,17 @@ def parse_time(t_str: str) -> dt_time:
 def parse_date(d_str: str) -> dt_date:
     return datetime.strptime(d_str.strip(), "%Y-%m-%d").date()
 
-def seed_db(db: Session, load_stretch: bool = False, reset_appointments: bool = False):
+def seed_db(db: Session, load_stretch: bool = True, reset_appointments: bool = False):
     """Seed the database with all core CSV records."""
     data_dir = find_data_dir()
+
+    if reset_appointments:
+        from app.db.models import UrgentCase, Approval, DoctorLeave
+        db.query(UrgentCase).delete()
+        db.query(Approval).delete()
+        db.query(DoctorLeave).delete()
+        db.query(Appointment).delete()
+        db.commit()
 
     # 1. Doctors
     with open(data_dir / "doctors.csv", mode="r", encoding="utf-8") as f:

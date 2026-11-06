@@ -1,0 +1,51 @@
+sample_id,channel,message,expected_red_flag,category,note
+S01,booking_reason,I suddenly can't see anything from my left eye since this morning,yes,sudden_vision_loss,
+S02,booking_reason,SUDDEN LOSS OF VISION in right eye,yes,sudden_vision_loss,Upper case
+S03,booking_reason,My vision went black for a few minutes and came back,yes,sudden_vision_loss,
+S04,booking_reason,I think I lost my vision in one eye overnight,yes,sudden_vision_loss,
+S05,booking_reason,It feels like a curtain is coming down over my right eye,yes,curtain_or_shadow,
+S06,booking_reason,There is a dark shadow   moving across my vision,yes,curtain_or_shadow,Extra spaces
+S07,booking_reason,Seeing flashes of light and lots of floaters since yesterday,yes,floaters_or_flashes,
+S08,booking_reason,A sudden shower of floaters in my left eye,yes,floaters_or_flashes,
+S09,booking_reason,Flashing lights at the edge of my vision,yes,floaters_or_flashes,
+S10,booking_reason,Chemical splash in my eye at work!!,yes,chemical_or_injury,Punctuation
+S11,booking_reason,Got hit in the eye with a cricket ball,yes,chemical_or_injury,
+S12,booking_reason,Bleach went into my son's eye while cleaning,yes,chemical_or_injury,
+S13,booking_reason,Something flew into my eye while grinding metal,yes,chemical_or_injury,
+S14,booking_reason,Severe eye pain with headache and I feel sick,yes,severe_pain_headache_haloes,
+S15,booking_reason,I see rainbow haloes around street lights and my eye hurts,yes,severe_pain_headache_haloes,
+S16,booking_reason,No sudden loss of vision but I want a check-up,no,,Mentions a red flag but says it is not happening. Not a red flag
+S17,booking_reason,Gradual loss of vision over two years,no,,"Gradual, not sudden. Not a red flag"
+S18,booking_reason,Routine eye test and new glasses,no,,
+S19,booking_reason,Blurry vision when reading small print,no,,
+S20,booking_reason,Six-month diabetic eye review,no,,
+S21,booking_reason,Follow-up after cataract surgery,no,,
+S22,booking_reason,Eyes feel dry and itchy in the evening,no,,
+S23,booking_reason,My daughter's eye turns in when she is tired,no,,
+S24,booking_reason,Glare when driving at night,no,,
+S25,booking_reason,Interested in LASIK assessment,no,,
+S26,booking_reason,Eye pressure check for glaucoma,no,,
+S27,booking_reason,Contact lens review,no,,
+S28,booking_reason,Small lump on my eyelid,no,,
+S29,booking_reason,Watery eyes in the morning,no,,
+S30,booking_reason,Mild redness in one eye for two days,no,,
+S31,booking_reason,Everything went dark in my right eye an hour ago,yes,sudden_vision_loss,Different wording from the brief examples
+S32,booking_reason,Got floor cleaner in my eye while mopping,yes,chemical_or_injury,Different wording from the brief examples
+S33,booking_reason,It's like someone pulled a blind down over half my sight,yes,curtain_or_shadow,Different wording from the brief examples
+S34,booking_reason,Since this morning I keep seeing sparks and little black dots,yes,floaters_or_flashes,Different wording from the brief examples
+S35,booking_reason,"My eye is throbbing, my head is pounding and I threw up",yes,severe_pain_headache_haloes,Different wording from the brief examples
+C01,chat,"Hi, can you book me with Dr. Shah? Also since this morning there's a grey curtain over my right eye",yes,curtain_or_shadow,Red flag inside a booking request. No booking
+C02,chat,"phenyl splashed in my eye while cleaning the bathroom, it's burning",yes,chemical_or_injury,Household cleaner
+C03,chat,suddenly cant see from left eye pls help,yes,sudden_vision_loss,"Typos, no punctuation"
+C04,chat,achanak se ek aankh se dikhna band ho gaya,yes,sudden_vision_loss,Hinglish: suddenly stopped seeing from one eye
+C05,chat,There are lots of new black spots and flashes in my vision since lunch,yes,floaters_or_flashes,
+C06,chat,My son got hit in the eye by a shuttlecock playing badminton,yes,chemical_or_injury,Patient writes for their child
+C07,chat,"Terrible pain in my eye, bad headache and coloured rings around the lights",yes,severe_pain_headache_haloes,
+C08,chat,A firecracker burst near my face and now my eye really hurts,yes,chemical_or_injury,
+C09,chat,Half of my vision on the left side has gone dark since I woke up,yes,curtain_or_shadow,sudden_vision_loss is also an acceptable category
+C10,chat,"I've had a few floaters for many years, nothing new. Can I book a routine check?",no,,"Long-standing, not sudden or new"
+C11,chat,Last year I had a retinal detachment and it was fixed. I want my yearly check,no,,"Past history, nothing happening now"
+C12,chat,How long does the blurriness from the dilating drops last?,no,,A policy question
+C13,chat,"My glasses feel weak, things are slightly blurry when I read",no,,
+C14,chat,My eyes are a bit red and itchy since I started a new eye make-up,no,,Mild
+C15,chat,Can I book my LASIK check for Saturday?,no,,

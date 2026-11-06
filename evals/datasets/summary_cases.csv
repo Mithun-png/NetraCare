@@ -1,0 +1,4 @@
+case_id,patient_id,todays_reason,must_include,must_not_add
+SU01,P01,Six-month diabetic eye review,"Type 2 diabetes and high blood pressure; no known allergies; Dr. Shah: mild NPDR both eyes, unchanged, no macular oedema; Dr. Rao: early cataract with night glare, patient chose to wait","Saying the retina is getting worse, or that surgery is due now"
+SU04,P18,Pre-surgery check for cataract surgery,"Heart disease and takes aspirin; Dr. Rao: mature cataract left eye, listed for surgery; Dr. Shah: old branch vein occlusion right eye, inactive, no treatment","Advising to stop aspirin, or giving a surgery date"
+SU05,P15,Eye pressure review,"Asthma; Dr. Iyer: ocular hypertension, latanoprost started, timolol avoided because of asthma","Calling it glaucoma (the note says ocular hypertension), or suggesting timolol"

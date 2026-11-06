@@ -1,6 +1,7 @@
 """API endpoints for Patient Conversational Booking Agent and Staff Search Debugger (Iteration 4)."""
 import uuid
 import json
+import os
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -12,6 +13,7 @@ from app.db.session import get_db
 from app.api.deps import get_current_patient, get_current_staff, CurrentUser
 from app.agent.graph import agent_graph
 from app.rag.retriever import get_hybrid_retriever
+from app.observability.opik_setup import get_opik_tracer, track_op
 
 router = APIRouter(tags=["Chat & Search"])
 
@@ -30,6 +32,7 @@ class PatientChatResponse(BaseModel):
     answered: bool = True
 
 @router.post("/patient/chat", response_model=PatientChatResponse)
+@track_op(name="patient_chat_turn", tags=["chat", "patient"])
 def patient_chat_endpoint(
     req: PatientChatRequest,
     patient: CurrentUser = Depends(get_current_patient),
@@ -40,6 +43,12 @@ def patient_chat_endpoint(
     and pauses for human confirmation before mutating the database.
     """
     thread_id = req.thread_id or f"t_{patient.id}_{uuid.uuid4().hex[:12]}"
+    project_name = os.getenv("OPIK_PROJECT_NAME", "netracare-dev")
+    tracer = get_opik_tracer(
+        project_name=project_name,
+        tags=["chat", "patient"],
+        metadata={"patient_id": patient.id, "thread_id": thread_id}
+    )
     config = {
         "configurable": {
             "thread_id": thread_id,
@@ -47,6 +56,8 @@ def patient_chat_endpoint(
         },
         "recursion_limit": 15,
     }
+    if tracer is not None:
+        config["callbacks"] = [tracer]
 
     try:
         # 1. Handle confirmation card response
