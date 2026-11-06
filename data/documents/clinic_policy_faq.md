@@ -28,6 +28,14 @@ NetraCare Eye Clinic is a fictional clinic used for this course. This document a
 - A follow-up is booked with the doctor who saw you before.
 - If no suitable slot is free in the next 30 days, the website says so. Please check again later, as cancelled slots become free for anyone.
 
+## Booking through the chat assistant
+
+- After logging in, you can ask the chat assistant to find free slots, book, cancel or change your appointment.
+- The assistant always tells you what it is about to do and waits for you to confirm before it books, cancels or changes anything.
+- It follows the same clinic rules as the booking page. If a time is not allowed, it tells you why and suggests other free times.
+- It needs the reason for your visit before it books, the same as the booking page.
+- It can only see and change your own appointments.
+
 ## Consultation fees
 
 - New consultation: ₹800.
@@ -38,7 +46,14 @@ NetraCare Eye Clinic is a fictional clinic used for this course. This document a
 
 - You can cancel your own appointment on the website until 2 hours before it starts.
 - Changing an appointment counts as cancelling it and booking a new one, so the same 2-hour limit applies.
-- Within 2 hours of the appointment, please contact Staff.
+- Within 2 hours of the appointment, your request goes to Staff for approval. Your appointment stays as it is until Staff approve it.
+
+## If your doctor is on leave
+
+- If your doctor has to take leave, your appointment is cancelled and Staff move you to the next free time with a doctor of the same speciality.
+- If no other doctor covers that speciality, or it was a follow-up, you are moved to your own doctor's next free time.
+- You can see the new time in your appointments once Staff confirm it. If it doesn't suit you, change it on the website or in the chat.
+- If no free time is found within 30 days, Staff will call you.
 
 ## What to bring
 
@@ -78,6 +93,7 @@ NetraCare Eye Clinic is a fictional clinic used for this course. This document a
 ## What the assistant can and cannot do
 
 - The assistant answers questions from NetraCare's documents and suggests which speciality to book.
+- It can find free slots, and book, cancel or change your own appointments after you confirm.
 - It cannot diagnose, say what condition you might have, suggest treatment or medicines, or read eye reports or images. Only a doctor can do that, at your visit.
 - It cannot take payments or help with insurance claims. Please ask Staff at the front desk.
 - It only ever discusses your own appointments and details.

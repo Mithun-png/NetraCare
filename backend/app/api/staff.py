@@ -271,7 +271,70 @@ def get_approvals(
     if status_filter:
         query = query.filter(Approval.status == status_filter.upper())
     approvals = query.order_by(Approval.created_at.desc()).all()
-    return approvals
+    
+    pat_map = {p.id: p.name for p in db.query(Patient).all()}
+    doc_map = {d.id: d.name for d in db.query(Doctor).all()}
+    appt_map = {a.id: a for a in db.query(Appointment).all()}
+
+    results = []
+    for ap in approvals:
+        appt = appt_map.get(ap.appointment_id)
+        results.append({
+            "id": ap.id,
+            "kind": ap.kind,
+            "appointment_id": ap.appointment_id,
+            "patient_id": appt.patient_id if appt else None,
+            "patient_name": pat_map.get(appt.patient_id, "Unknown") if appt else "Unknown",
+            "doctor_name": doc_map.get(appt.doctor_id, "Unknown") if appt else "Unknown",
+            "date": appt.date.isoformat() if appt else None,
+            "start_time": appt.start_time.strftime("%H:%M") if appt else None,
+            "payload": ap.payload,
+            "status": ap.status,
+            "decided_by": ap.decided_by,
+            "decided_at": ap.decided_at.isoformat() if ap.decided_at else None,
+            "reason": ap.reason,
+            "created_at": ap.created_at.isoformat() if ap.created_at else None,
+        })
+    return results
+
+def _apply_approval_decision(db: Session, appr: Approval, decision: str, staff_name: str, reason: Optional[str] = None):
+    import json
+    appr.status = decision
+    appr.decided_by = staff_name
+    appr.decided_at = datetime.now(timezone.utc)
+    appr.reason = reason
+
+    appt = db.query(Appointment).filter(Appointment.id == appr.appointment_id).first()
+    if appt:
+        if decision == "APPROVED":
+            if appr.kind == "LATE_CANCEL":
+                appt.status = "cancelled"
+            elif appr.kind == "LATE_RESCHEDULE":
+                # Parse new date and time from payload
+                try:
+                    payload = json.loads(appr.payload)
+                    new_date_val = datetime.strptime(payload["new_date"], "%Y-%m-%d").date()
+                    parts = payload["new_start_time"].split(":")
+                    new_time_val = dt_time(int(parts[0]), int(parts[1]))
+                    new_doc_id = payload.get("new_doctor_id") or appt.doctor_id
+                    new_spec = payload.get("new_speciality") or appt.speciality
+
+                    # Perform reschedule as staff
+                    BookingService.reschedule(
+                        db=db,
+                        appointment_id=appt.id,
+                        new_date=new_date_val,
+                        new_start_time=new_time_val,
+                        new_doctor_id=new_doc_id,
+                        new_speciality=new_spec,
+                        actor_role="staff",
+                    )
+                except Exception:
+                    appt.status = "cancelled"
+        else:
+            # Reverted back to booked
+            appt.status = "booked"
+    db.commit()
 
 @router.post("/approvals/{approval_id}/decide")
 def decide_approval(
@@ -288,25 +351,100 @@ def decide_approval(
     if decision not in ["APPROVED", "REJECTED"]:
         raise HTTPException(status_code=400, detail="Decision must be APPROVED or REJECTED.")
 
-    appr.status = decision
-    appr.decided_by = staff.name
-    appr.decided_at = datetime.now(timezone.utc)
-    appr.reason = req.reason
-
-    appt = db.query(Appointment).filter(Appointment.id == appr.appointment_id).first()
-    if appt:
-        if decision == "APPROVED":
-            if appr.kind == "LATE_CANCEL":
-                appt.status = "cancelled"
-            elif appr.kind == "LATE_RESCHEDULE":
-                # Reschedule approved
-                appt.status = "cancelled"
-        else:
-            # Reverted back to booked
-            appt.status = "booked"
-
-    db.commit()
+    _apply_approval_decision(db, appr, decision, staff.name, req.reason)
     return {"ok": True, "message": f"Approval #{approval_id} set to {decision}."}
+
+@router.post("/approvals/{approval_id}/approve")
+def approve_approval(
+    approval_id: int,
+    staff: CurrentUser = Depends(get_current_staff),
+    db: Session = Depends(get_db),
+):
+    appr = db.query(Approval).filter(Approval.id == approval_id).first()
+    if not appr:
+        raise HTTPException(status_code=404, detail="Approval request not found.")
+    _apply_approval_decision(db, appr, "APPROVED", staff.name)
+    return {"ok": True, "message": f"Approval #{approval_id} approved."}
+
+@router.post("/approvals/{approval_id}/reject")
+def reject_approval(
+    approval_id: int,
+    staff: CurrentUser = Depends(get_current_staff),
+    db: Session = Depends(get_db),
+):
+    appr = db.query(Approval).filter(Approval.id == approval_id).first()
+    if not appr:
+        raise HTTPException(status_code=404, detail="Approval request not found.")
+    _apply_approval_decision(db, appr, "REJECTED", staff.name)
+    return {"ok": True, "message": f"Approval #{approval_id} rejected."}
+
+# Doctor Leave Rebookings (R7)
+@router.get("/rebookings")
+def get_rebookings(
+    staff: CurrentUser = Depends(get_current_staff),
+    db: Session = Depends(get_db),
+):
+    """List appointments with proposed status waiting for Staff approval."""
+    proposals = (
+        db.query(Appointment)
+        .filter(Appointment.status == "proposed")
+        .order_by(Appointment.date.asc(), Appointment.start_time.asc())
+        .all()
+    )
+    pat_map = {p.id: p.name for p in db.query(Patient).all()}
+    doc_map = {d.id: d.name for d in db.query(Doctor).all()}
+
+    return [
+        {
+            "id": p.id,
+            "patient_id": p.patient_id,
+            "patient_name": pat_map.get(p.patient_id, "Unknown"),
+            "doctor_id": p.doctor_id,
+            "doctor_name": doc_map.get(p.doctor_id, "Unknown"),
+            "speciality": p.speciality,
+            "visit_type": p.visit_type,
+            "date": p.date.isoformat(),
+            "start_time": p.start_time.strftime("%H:%M"),
+            "end_time": p.end_time.strftime("%H:%M"),
+            "status": p.status,
+            "reason": p.reason,
+            "rescheduled_from": p.rescheduled_from,
+        }
+        for p in proposals
+    ]
+
+@router.post("/rebookings/{appointment_id}/approve")
+def approve_rebooking(
+    appointment_id: str,
+    staff: CurrentUser = Depends(get_current_staff),
+    db: Session = Depends(get_db),
+):
+    appt = db.query(Appointment).filter(Appointment.id == appointment_id.strip()).first()
+    if not appt:
+        raise HTTPException(status_code=404, detail="Appointment not found.")
+    if appt.status != "proposed":
+        raise HTTPException(status_code=400, detail="Appointment is not in proposed status.")
+
+    appt.status = "booked"
+    db.commit()
+    return {"ok": True, "message": f"Rebooking {appt.id} approved and booked."}
+
+@router.post("/rebookings/{appointment_id}/reject")
+def reject_rebooking(
+    appointment_id: str,
+    staff: CurrentUser = Depends(get_current_staff),
+    db: Session = Depends(get_db),
+):
+    appt = db.query(Appointment).filter(Appointment.id == appointment_id.strip()).first()
+    if not appt:
+        raise HTTPException(status_code=404, detail="Appointment not found.")
+    if appt.status != "proposed":
+        raise HTTPException(status_code=400, detail="Appointment is not in proposed status.")
+
+    appt.status = "cancelled"
+    db.commit()
+    return {"ok": True, "message": f"Rebooking {appt.id} rejected and cancelled."}
+
 
 @router.get("/patients")
 def search_patients(

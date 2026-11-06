@@ -16,15 +16,23 @@ class CurrentUser(BaseModel):
 
 def get_current_user(
     x_session_data: Optional[str] = Header(None, alias="X-Session-Data"),
+    authorization: Optional[str] = Header(None, alias="Authorization"),
 ) -> CurrentUser:
-    """Extract and validate user session from request header."""
-    if not x_session_data:
+    """Extract and validate user session from request header (X-Session-Data or Authorization)."""
+    token = x_session_data
+    if not token and authorization:
+        if authorization.lower().startswith("bearer "):
+            token = authorization[7:].strip()
+        else:
+            token = authorization.strip()
+
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required. Please log in.",
         )
     try:
-        raw_json = base64.b64decode(x_session_data).decode("utf-8")
+        raw_json = base64.b64decode(token).decode("utf-8")
         data = json.loads(raw_json)
         return CurrentUser(**data)
     except Exception:

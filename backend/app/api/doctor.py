@@ -234,3 +234,57 @@ def complete_visit(
         "status": appt.status,
     }
 
+
+class DoctorLeaveRequest(BaseModel):
+    date: str                # YYYY-MM-DD
+    session: str = "FULL"    # AM, PM, FULL
+
+
+@router.post("/leave")
+def mark_doctor_leave(
+    req: DoctorLeaveRequest,
+    doctor: CurrentUser = Depends(get_current_doctor),
+    db: Session = Depends(get_db),
+):
+    """Mark leave for a doctor on a specific date and session. Auto-proposes rebookings (R7)."""
+    now = get_clinic_now()
+    try:
+        date_val = datetime.strptime(req.date.strip(), "%Y-%m-%d").date()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+
+    if date_val < now.date() or (date_val - now.date()).days > 30:
+        raise HTTPException(status_code=400, detail="Leave date must be between today and the next 30 days.")
+
+    session_kind = req.session.strip().upper()
+    if session_kind not in ["AM", "PM", "FULL"]:
+        raise HTTPException(status_code=400, detail="Session must be AM, PM, or FULL.")
+
+    result = BookingService.apply_doctor_leave(
+        db=db,
+        doctor_id=doctor.id,
+        date_val=date_val,
+        session_kind=session_kind,
+    )
+    return {"ok": True, "message": "Doctor leave recorded and rebooking proposals generated.", **result}
+
+
+@router.get("/leaves")
+def get_doctor_leaves(
+    doctor: CurrentUser = Depends(get_current_doctor),
+    db: Session = Depends(get_db),
+):
+    from app.db.models import DoctorLeave
+    leaves = db.query(DoctorLeave).filter(DoctorLeave.doctor_id == doctor.id).order_by(DoctorLeave.date.asc()).all()
+    return [
+        {
+            "id": lv.id,
+            "doctor_id": lv.doctor_id,
+            "date": lv.date.isoformat(),
+            "session": lv.session,
+            "created_at": lv.created_at.isoformat() if lv.created_at else None,
+        }
+        for lv in leaves
+    ]
+
+

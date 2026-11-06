@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
-import { MessageSquare, Send, RotateCcw, AlertTriangle, BookOpen, Sparkles } from 'lucide-react';
+import { MessageSquare, Send, RotateCcw, AlertTriangle, BookOpen, Sparkles, CheckCircle, XCircle } from 'lucide-react';
 import { api } from '../api/client';
 
 export default function PatientChat() {
   const [messages, setMessages] = useState([]);
+  const [threadId, setThreadId] = useState('');
+  const [pendingAction, setPendingAction] = useState(null);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const quickQuestions = [
-    "What time does the clinic open on Saturday?",
-    "How much does cataract surgery cost?",
-    "Is it safe to ride my scooter after dilating drops?",
-    "My optician said the pressure in my eyes is high",
+    "Book my retina follow-up with Dr. Shah this Friday morning. Reason: diabetic eye review",
+    "What appointments do I have?",
+    "How much is a new consultation?",
+    "Book a glaucoma check with Dr. Iyer this Thursday",
+    "Is there parking at the clinic?",
   ];
 
   const handleSend = async (textToSend) => {
@@ -30,27 +33,71 @@ export default function PatientChat() {
     setMessages(newHistory);
     setInput('');
     setLoading(true);
+    setPendingAction(null);
 
     try {
-      // Send last 6 messages as history
-      const historyPayload = messages.slice(-6).map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
+      const payload = {
+        message: text,
+        thread_id: threadId || undefined,
+      };
 
-      const res = await api.patientChat(text, historyPayload);
+      const res = await api.patientChat(payload);
+      if (res.thread_id) {
+        setThreadId(res.thread_id);
+      }
 
       const botMsg = {
         role: 'assistant',
         content: res.answer,
         sources: res.sources || [],
         emergency: res.emergency || false,
-        answered: res.answered !== false,
+        pending_action: res.pending_action || null,
       };
 
       setMessages([...newHistory, botMsg]);
+      if (res.pending_action) {
+        setPendingAction(res.pending_action);
+      }
     } catch (err) {
       setError(err.message || "We couldn't check your message just now. Please try again, or call the clinic if it's urgent.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirm = async (confirmed) => {
+    if (loading || !threadId) return;
+
+    setError('');
+    setLoading(true);
+    setPendingAction(null);
+
+    const actionText = confirmed ? 'Confirm' : 'No';
+    const userMsg = { role: 'user', content: actionText };
+    const newHistory = [...messages, userMsg];
+    setMessages(newHistory);
+
+    try {
+      const payload = {
+        thread_id: threadId,
+        confirm: confirmed,
+      };
+
+      const res = await api.patientChat(payload);
+      const botMsg = {
+        role: 'assistant',
+        content: res.answer,
+        sources: res.sources || [],
+        emergency: res.emergency || false,
+        pending_action: res.pending_action || null,
+      };
+
+      setMessages([...newHistory, botMsg]);
+      if (res.pending_action) {
+        setPendingAction(res.pending_action);
+      }
+    } catch (err) {
+      setError(err.message || "We couldn't process your confirmation just now. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -65,6 +112,8 @@ export default function PatientChat() {
 
   const handleNewChat = () => {
     setMessages([]);
+    setThreadId('');
+    setPendingAction(null);
     setInput('');
     setError('');
   };
@@ -77,9 +126,9 @@ export default function PatientChat() {
             <MessageSquare size={20} />
           </div>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Ask NetraCare Assistant</h3>
+            <h3 style={{ margin: 0, fontSize: '1.1rem' }}>NetraCare Booking Assistant</h3>
             <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
-              Answers from official clinic documents with citations & speciality guidance
+              Find slots, book, reschedule, cancel, and check clinic policies in real-time
             </span>
           </div>
         </div>
@@ -97,7 +146,7 @@ export default function PatientChat() {
       {messages.length === 0 && (
         <div style={{ display: 'grid', gap: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--muted)' }}>
-            <Sparkles size={14} color="var(--accent)" /> Quick questions you can ask:
+            <Sparkles size={14} color="var(--accent)" /> Examples you can try:
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {quickQuestions.map((q, idx) => (
@@ -125,8 +174,8 @@ export default function PatientChat() {
       {/* Chat Messages */}
       <div
         style={{
-          minHeight: '220px',
-          maxHeight: '380px',
+          minHeight: '260px',
+          maxHeight: '440px',
           overflowY: 'auto',
           display: 'grid',
           gap: '12px',
@@ -149,7 +198,7 @@ export default function PatientChat() {
               borderRadius: m.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
               padding: '12px 16px',
               display: 'grid',
-              gap: '6px',
+              gap: '8px',
             }}
           >
             {m.emergency && (
@@ -160,6 +209,57 @@ export default function PatientChat() {
             <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
               {m.content}
             </p>
+
+            {/* Confirmation Card (R5) */}
+            {m.pending_action && idx === messages.length - 1 && (
+              <div
+                style={{
+                  background: 'var(--surface)',
+                  border: '2px solid var(--accent)',
+                  borderRadius: '8px',
+                  padding: '12px 14px',
+                  display: 'grid',
+                  gap: '10px',
+                  marginTop: '4px',
+                }}
+              >
+                <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--ink)' }}>
+                  {m.pending_action.summary}
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => handleConfirm(true)}
+                    disabled={loading}
+                    className="btn btn-primary"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 16px',
+                      fontSize: '0.9rem',
+                    }}
+                  >
+                    <CheckCircle size={16} /> Confirm
+                  </button>
+                  <button
+                    onClick={() => handleConfirm(false)}
+                    disabled={loading}
+                    className="btn btn-secondary"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 16px',
+                      fontSize: '0.9rem',
+                      color: 'var(--danger)',
+                    }}
+                  >
+                    <XCircle size={16} /> No
+                  </button>
+                </div>
+              </div>
+            )}
+
             {m.sources && m.sources.length > 0 && (
               <div style={{ borderTop: '1px dashed var(--line)', paddingTop: '6px', marginTop: '4px', display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.75rem', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -187,7 +287,7 @@ export default function PatientChat() {
         ))}
         {loading && (
           <div style={{ justifySelf: 'start', background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: '12px', padding: '10px 14px', fontSize: '0.88rem', color: 'var(--muted)' }}>
-            Checking clinic knowledge base...
+            Processing with clinic assistant...
           </div>
         )}
       </div>
@@ -204,7 +304,7 @@ export default function PatientChat() {
           <input
             type="text"
             className="input"
-            placeholder="Ask about timings, fees, cataract, LASIK, or describe an eye concern..."
+            placeholder={pendingAction ? "Type a new question or press Confirm / No on the card..." : "Ask to find slots, book, cancel, reschedule, or ask a question..."}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -222,7 +322,7 @@ export default function PatientChat() {
           </button>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--muted)', paddingInline: '4px' }}>
-          <span>Enter to send · Answers strictly ground in NetraCare clinic documents</span>
+          <span>Enter to send · Write actions always wait for your confirmation</span>
           <span style={{ color: input.length > 450 ? 'var(--danger)' : 'var(--muted)' }}>
             {input.length}/500
           </span>
@@ -231,4 +331,3 @@ export default function PatientChat() {
     </div>
   );
 }
-

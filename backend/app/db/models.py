@@ -121,6 +121,18 @@ class Approval(Base):
     created_at = Column(DateTime, default=utc_now, nullable=False)
 
 
+class DoctorLeave(Base):
+    __tablename__ = "doctor_leaves"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    doctor_id = Column(String(10), ForeignKey("doctors.id"), nullable=False, index=True)
+    date = Column(Date, nullable=False, index=True)
+    session = Column(String(10), nullable=False)  # AM, PM, FULL
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+
+    doctor = relationship("Doctor")
+
+
 class AuditEvent(Base):
     __tablename__ = "audit_events"
 

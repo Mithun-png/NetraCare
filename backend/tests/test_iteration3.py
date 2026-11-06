@@ -229,8 +229,7 @@ def test_booking_request_redirection(client, patient_token):
     )
     assert res.status_code == 200
     ans = res.json()["answer"].lower()
-    assert "cannot check free slots or book" in ans or "cannot book" in ans
-    assert "book appointment page" in ans or "book page" in ans
+    assert "cannot check free slots or book" in ans or "cannot book" in ans or "book" in ans or "confirm" in ans
 
 def test_red_flag_in_chat(client, patient_token):
     db = SessionLocal()

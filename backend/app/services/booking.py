@@ -16,6 +16,7 @@ from app.db.models import (
     Patient,
     Appointment,
     Approval,
+    DoctorLeave,
     AuditEvent,
 )
 from app.services.reasons import ReasonCode, REASON_MESSAGES
@@ -79,6 +80,16 @@ class BookingService:
         day_abbr = cls.get_day_abbr(date_val)
         duration = cls.get_duration_minutes(visit_type)
 
+        # Doctor leave check: if leave on this date, skip affected sessions
+        doctor_leaves = (
+            db.query(DoctorLeave)
+            .filter(DoctorLeave.doctor_id == doctor_id, DoctorLeave.date == date_val)
+            .all()
+        )
+        leave_sessions = {lv.session for lv in doctor_leaves}
+        if "FULL" in leave_sessions:
+            return []
+
         # Get schedules for this doctor on this weekday
         schedules = (
             db.query(WeeklySchedule)
@@ -91,7 +102,7 @@ class BookingService:
             .filter(
                 Appointment.doctor_id == doctor_id,
                 Appointment.date == date_val,
-                Appointment.status.in_(["booked", "pending_staff"]),
+                Appointment.status.in_(["booked", "pending_staff", "proposed"]),
             )
             .all()
         )
@@ -99,6 +110,8 @@ class BookingService:
         slots = []
         for sched in schedules:
             if sched.status != "OPD":
+                continue
+            if sched.session in leave_sessions:
                 continue
 
             if sched.session == "AM":
@@ -263,6 +276,21 @@ class BookingService:
                 message=REASON_MESSAGES[ReasonCode.SURGERY_SESSION],
             )
 
+        # 8b. Doctor leave check
+        doctor_leaves = (
+            db.query(DoctorLeave)
+            .filter(DoctorLeave.doctor_id == doctor_id, DoctorLeave.date == date_val)
+            .all()
+        )
+        for lv in doctor_leaves:
+            if lv.session == "FULL" or lv.session == session_kind:
+                return BookingResult(
+                    ok=False,
+                    expected="refused",
+                    reason_code=ReasonCode.DOCTOR_ON_LEAVE,
+                    message=REASON_MESSAGES[ReasonCode.DOCTOR_ON_LEAVE],
+                )
+
         # 9. Doctor speciality match
         doc = db.query(Doctor).filter(Doctor.id == doctor_id).first()
         if not doc:
@@ -285,7 +313,7 @@ class BookingService:
         active_query = db.query(Appointment).filter(
             Appointment.patient_id == patient_id,
             func.lower(Appointment.speciality) == speciality.lower(),
-            Appointment.status.in_(["booked", "pending_staff"]),
+            Appointment.status.in_(["booked", "pending_staff", "proposed"]),
         )
         if ignore_appointment_id:
             active_query = active_query.filter(Appointment.id != ignore_appointment_id)
@@ -329,7 +357,7 @@ class BookingService:
         overlap_query = db.query(Appointment).filter(
             Appointment.doctor_id == doctor_id,
             Appointment.date == date_val,
-            Appointment.status.in_(["booked", "pending_staff"]),
+            Appointment.status.in_(["booked", "pending_staff", "proposed"]),
         )
         if ignore_appointment_id:
             overlap_query = overlap_query.filter(Appointment.id != ignore_appointment_id)
@@ -562,3 +590,156 @@ class BookingService:
 
         db.commit()
         return val_result
+
+    @classmethod
+    def apply_doctor_leave(
+        cls,
+        db: Session,
+        doctor_id: str,
+        date_val: dt_date,
+        session_kind: str = "FULL",  # "AM", "PM", "FULL"
+    ) -> Dict[str, Any]:
+        """Apply doctor leave, cancel affected appointments, and propose rebookings per R7."""
+        doc = db.query(Doctor).filter(Doctor.id == doctor_id).first()
+        if not doc:
+            raise ValueError(f"Doctor {doctor_id} not found.")
+
+        # Save leave
+        leave = DoctorLeave(
+            doctor_id=doctor_id,
+            date=date_val,
+            session=session_kind,
+        )
+        db.add(leave)
+        db.flush()
+
+        # Find affected active appointments
+        query = (
+            db.query(Appointment)
+            .filter(
+                Appointment.doctor_id == doctor_id,
+                Appointment.date == date_val,
+                Appointment.status.in_(["booked", "pending_staff"]),
+            )
+        )
+        if session_kind == "AM":
+            query = query.filter(Appointment.start_time < dt_time(13, 0))
+        elif session_kind == "PM":
+            query = query.filter(Appointment.start_time >= dt_time(14, 0))
+
+        affected_appts = query.order_by(Appointment.start_time.asc()).all()
+
+        all_doctors = db.query(Doctor).all()
+        proposals = []
+
+        for appt in affected_appts:
+            # 1. Cancel original appointment
+            appt.status = "cancelled"
+            appt.doctor_note = f"Moved because Dr. {doc.name} is on leave"
+
+            # 2. Find replacement slot
+            # Rule for 'new': earliest free slot at or after original start time, across all doctors who cover that speciality
+            # Tie: original doctor first, then lower doctor ID
+            # Rule for 'follow_up': same doctor, next free slot
+            if appt.visit_type == "new":
+                candidate_docs = [
+                    d for d in all_doctors
+                    if appt.speciality.lower() in [s.lower() for s in d.get_speciality_list()]
+                ]
+            else:
+                candidate_docs = [doc]
+
+            # Search from date_val up to date_val + 30 days
+            found_proposal = None
+            for day_offset in range(31):
+                target_date = date_val + timedelta(days=day_offset)
+                # Check Sunday or holiday
+                if target_date.weekday() == 6:
+                    continue
+                if db.query(Holiday).filter(Holiday.date == target_date).first():
+                    continue
+
+                # Collect available slots across candidate doctors on this date
+                day_candidates = []
+                for c_doc in candidate_docs:
+                    slots = cls.find_slots(
+                        db=db,
+                        doctor_id=c_doc.id,
+                        date_val=target_date,
+                        visit_type=appt.visit_type,
+                        patient_id=appt.patient_id,
+                    )
+                    for slot in slots:
+                        slot_start = datetime.strptime(slot["start_time"], "%H:%M").time()
+                        if target_date == date_val and slot_start < appt.start_time:
+                            continue
+                        day_candidates.append({
+                            "doctor": c_doc,
+                            "date": target_date,
+                            "start_time": slot_start,
+                            "end_time": datetime.strptime(slot["end_time"], "%H:%M").time(),
+                        })
+
+                if day_candidates:
+                    # Sort candidates by:
+                    # 1. start_time asc
+                    # 2. is_original_doctor desc (0 for original, 1 for others)
+                    # 3. doctor.id asc
+                    day_candidates.sort(
+                        key=lambda x: (
+                            x["start_time"],
+                            0 if x["doctor"].id == appt.doctor_id else 1,
+                            x["doctor"].id,
+                        )
+                    )
+                    best = day_candidates[0]
+                    # Create proposal appointment holding the slot
+                    prop_id = f"A{int(datetime.now(timezone.utc).timestamp() * 1000) % 1000000:06d}"
+                    prop_appt = Appointment(
+                        id=prop_id,
+                        patient_id=appt.patient_id,
+                        doctor_id=best["doctor"].id,
+                        speciality=appt.speciality,
+                        visit_type=appt.visit_type,
+                        mode=appt.mode,
+                        status="proposed",
+                        date=best["date"],
+                        start_time=best["start_time"],
+                        end_time=best["end_time"],
+                        source="STAFF",
+                        reason=f"Moved because Dr. {doc.name} is on leave",
+                        rescheduled_from=appt.id,
+                    )
+                    db.add(prop_appt)
+                    db.flush()
+                    found_proposal = prop_appt
+                    proposals.append({
+                        "original_appointment_id": appt.id,
+                        "proposed_appointment_id": prop_id,
+                        "patient_id": appt.patient_id,
+                        "doctor_id": best["doctor"].id,
+                        "doctor_name": best["doctor"].name,
+                        "speciality": appt.speciality,
+                        "visit_type": appt.visit_type,
+                        "date": best["date"].isoformat(),
+                        "start_time": best["start_time"].strftime("%H:%M"),
+                        "end_time": best["end_time"].strftime("%H:%M"),
+                    })
+                    break
+
+            if not found_proposal:
+                proposals.append({
+                    "original_appointment_id": appt.id,
+                    "proposed_appointment_id": None,
+                    "patient_id": appt.patient_id,
+                    "note": "No slot: call the patient",
+                })
+
+        db.commit()
+        return {
+            "doctor_id": doctor_id,
+            "date": date_val.isoformat(),
+            "session": session_kind,
+            "affected_count": len(affected_appts),
+            "proposals": proposals,
+        }

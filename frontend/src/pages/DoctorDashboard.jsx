@@ -19,6 +19,12 @@ export default function DoctorDashboard() {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState(null);
 
+  // Leave modal state (Iteration 4 R7)
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [leaveDate, setLeaveDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [leaveSession, setLeaveSession] = useState('FULL');
+  const [leaveSubmitting, setLeaveSubmitting] = useState(false);
+
   const fetchSchedule = async (selectedDate) => {
     setLoading(true);
     try {
@@ -69,6 +75,21 @@ export default function DoctorDashboard() {
     }
   };
 
+  const handleLeaveSubmit = async (e) => {
+    e.preventDefault();
+    setLeaveSubmitting(true);
+    try {
+      const res = await api.markDoctorLeave({ date: leaveDate, session: leaveSession });
+      alert(`Leave recorded! ${res.affected_count} affected appointments moved to proposals for Staff.`);
+      setShowLeaveModal(false);
+      fetchSchedule(date);
+    } catch (err) {
+      alert(err.message || 'Failed to record leave.');
+    } finally {
+      setLeaveSubmitting(false);
+    }
+  };
+
   return (
     <div className="container" style={{ display: 'grid', gap: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
@@ -78,6 +99,9 @@ export default function DoctorDashboard() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button className="btn btn-secondary" onClick={() => setShowLeaveModal(true)} style={{ color: 'var(--accent)' }}>
+            Mark Leave (R7)
+          </button>
           <label style={{ fontWeight: 600, fontSize: '0.9rem' }}>Select Date:</label>
           <input
             type="date"
@@ -390,6 +414,61 @@ export default function DoctorDashboard() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* Doctor Leave Modal (R7) */}
+      {showLeaveModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+          }}
+        >
+          <div className="card" style={{ maxWidth: '480px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Mark Doctor Leave (R7)</h3>
+              <button className="btn btn-secondary" onClick={() => setShowLeaveModal(false)}>✕</button>
+            </div>
+            <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginBottom: '16px' }}>
+              Marking leave cancels affected bookings and automatically generates rebooking proposals for clinic Staff to approve.
+            </p>
+            <form onSubmit={handleLeaveSubmit} style={{ display: 'grid', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '6px' }}>Leave Date:</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={leaveDate}
+                  onChange={(e) => setLeaveDate(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '6px' }}>Session:</label>
+                <select
+                  className="form-control"
+                  value={leaveSession}
+                  onChange={(e) => setLeaveSession(e.target.value)}
+                >
+                  <option value="FULL">Full Day (AM & PM)</option>
+                  <option value="AM">Morning Session (09:00 - 13:00)</option>
+                  <option value="PM">Evening Session (14:00 - 18:00)</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowLeaveModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={leaveSubmitting}>
+                  {leaveSubmitting ? 'Recording...' : 'Mark Leave & Propose Rebookings'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

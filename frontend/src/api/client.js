@@ -57,8 +57,11 @@ export const api = {
   rescheduleMyAppointment: (id, payload) =>
     request(`/patient/appointments/${encodeURIComponent(id)}/reschedule`, { method: 'POST', body: JSON.stringify(payload) }),
   getPatientProfile: () => request('/patient/profile'),
-  patientChat: (message, history = []) =>
-    request('/patient/chat', { method: 'POST', body: JSON.stringify({ message, history }) }),
+  patientChat: (payload) =>
+    request('/patient/chat', {
+      method: 'POST',
+      body: JSON.stringify(typeof payload === 'string' ? { message: payload } : payload),
+    }),
 
   // Doctor
   getDoctorSchedule: (date) => request(date ? `/doctor/schedule?date=${encodeURIComponent(date)}` : '/doctor/schedule'),
@@ -66,6 +69,9 @@ export const api = {
   getDoctorPatientSummary: (id) => request(`/doctor/appointments/${encodeURIComponent(id)}/summary`),
   completeVisit: (id, doctorNote) =>
     request(`/doctor/appointments/${encodeURIComponent(id)}/complete`, { method: 'POST', body: JSON.stringify({ doctor_note: doctorNote }) }),
+  markDoctorLeave: (payload) =>
+    request('/doctor/leave', { method: 'POST', body: JSON.stringify(payload) }),
+  getDoctorLeaves: () => request('/doctor/leaves'),
 
   // Staff
   getStaffAppointments: (params = {}) => {
@@ -81,8 +87,17 @@ export const api = {
   getUrgentCases: () => request('/staff/urgent'),
   markUrgentSeen: (id) => request(`/staff/urgent/${encodeURIComponent(id)}/seen`, { method: 'POST' }),
   getApprovals: () => request('/staff/approvals'),
+  approveApproval: (id) =>
+    request(`/staff/approvals/${encodeURIComponent(id)}/approve`, { method: 'POST' }),
+  rejectApproval: (id) =>
+    request(`/staff/approvals/${encodeURIComponent(id)}/reject`, { method: 'POST' }),
   decideApproval: (id, decision, reason) =>
     request(`/staff/approvals/${encodeURIComponent(id)}/decide`, { method: 'POST', body: JSON.stringify({ decision, reason }) }),
+  getStaffRebookings: () => request('/staff/rebookings'),
+  approveRebooking: (id) =>
+    request(`/staff/rebookings/${encodeURIComponent(id)}/approve`, { method: 'POST' }),
+  rejectRebooking: (id) =>
+    request(`/staff/rebookings/${encodeURIComponent(id)}/reject`, { method: 'POST' }),
   searchPatients: (q) => request(`/staff/patients${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   getSearchDebug: (q) => request(`/staff/search-debug?q=${encodeURIComponent(q)}`),
 };

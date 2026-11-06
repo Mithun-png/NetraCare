@@ -267,7 +267,7 @@ Return JSON with exact keys:
         )
 
     # Consultation fees
-    if "consultation fee" in q_lower or "follow-up consultation" in q_lower or "how much is a follow-up" in q_lower:
+    if any(k in q_lower for k in ["consultation fee", "consultation fees", "how much is a new consultation", "how much is a consultation", "new consultation fee", "how much is a follow-up", "follow-up consultation"]):
         return ParsedAnswer(
             answer="A new consultation is ₹800. A follow-up consultation is ₹400. Tests and procedures are charged separately as indicative fees.",
             source_ids=["clinic_policy_faq_consultation_fees"],

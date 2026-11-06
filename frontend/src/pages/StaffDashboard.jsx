@@ -8,6 +8,7 @@ export default function StaffDashboard() {
   const { user } = useAuth();
   const [urgentCases, setUrgentCases] = useState([]);
   const [approvals, setApprovals] = useState([]);
+  const [rebookings, setRebookings] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [filterDate, setFilterDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -30,14 +31,16 @@ export default function StaffDashboard() {
   const refreshAll = async () => {
     setLoading(true);
     try {
-      const [urgentRes, apprRes, apptsRes, docsRes] = await Promise.all([
+      const [urgentRes, apprRes, rebookRes, apptsRes, docsRes] = await Promise.all([
         api.getUrgentCases(),
         api.getApprovals(),
+        api.getStaffRebookings(),
         api.getStaffAppointments({ date: filterDate, doctor_id: selectedDoctor || undefined }),
         api.getDoctors(),
       ]);
       setUrgentCases(urgentRes);
       setApprovals(apprRes);
+      setRebookings(rebookRes);
       setAppointments(apptsRes);
       setDoctors(docsRes);
     } catch (e) {
@@ -77,7 +80,21 @@ export default function StaffDashboard() {
   };
 
   const handleDecideApproval = async (id, decision) => {
-    await api.decideApproval(id, decision, 'Staff reviewed');
+    if (decision === 'APPROVED') {
+      await api.approveApproval(id);
+    } else {
+      await api.rejectApproval(id);
+    }
+    refreshAll();
+  };
+
+  const handleApproveRebooking = async (id) => {
+    await api.approveRebooking(id);
+    refreshAll();
+  };
+
+  const handleRejectRebooking = async (id) => {
+    await api.rejectRebooking(id);
     refreshAll();
   };
 
@@ -180,6 +197,62 @@ export default function StaffDashboard() {
         </div>
       )}
 
+      {/* Doctor Leave Rebookings Queue (R7) */}
+      {rebookings.length > 0 && (
+        <div className="card" style={{ borderLeft: '4px solid #f59e0b' }}>
+          <h3 style={{ fontSize: '1.2rem', marginBottom: '8px' }}>
+            Doctor Leave Rebooking Proposals ({rebookings.length} Pending Approval)
+          </h3>
+          <p style={{ color: 'var(--muted)', fontSize: '0.9rem', marginBottom: '12px' }}>
+            Automated rebooking proposals generated when doctors mark leave. Review and approve to confirm the new booking.
+          </p>
+
+          <div style={{ display: 'grid', gap: '8px' }}>
+            {rebookings.map((rb) => (
+              <div
+                key={rb.id}
+                style={{
+                  border: '1px solid var(--line)',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: 'var(--bg)',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span className="badge badge-opd">{rb.speciality} ({rb.visit_type})</span>
+                    <span style={{ fontWeight: 600 }}>{rb.patient_name}</span>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>Proposed with {rb.doctor_name}</span>
+                  </div>
+                  <div style={{ fontSize: '0.88rem', color: 'var(--ink)' }}>
+                    New slot: <b>{rb.date} at {rb.start_time}–{rb.end_time}</b> · <span style={{ color: 'var(--muted)' }}>{rb.reason}</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    className="btn btn-primary"
+                    style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+                    onClick={() => handleApproveRebooking(rb.id)}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+                    onClick={() => handleRejectRebooking(rb.id)}
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Approvals Queue */}
       {approvals.length > 0 && (
         <div className="card" style={{ borderLeft: '4px solid var(--accent)' }}>
@@ -220,6 +293,62 @@ export default function StaffDashboard() {
                     className="btn btn-secondary"
                     style={{ padding: '6px 12px', fontSize: '0.85rem' }}
                     onClick={() => handleDecideApproval(appr.id, 'REJECTED')}
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Doctor Leave Rebookings Queue (R7) */}
+      {rebookings.length > 0 && (
+        <div className="card" style={{ borderLeft: '4px solid #f59e0b' }}>
+          <h3 style={{ fontSize: '1.2rem', marginBottom: '8px' }}>
+            Doctor Leave Rebooking Proposals ({rebookings.length} Pending Approval)
+          </h3>
+          <p style={{ color: 'var(--muted)', fontSize: '0.9rem', marginBottom: '12px' }}>
+            Automated rebooking proposals generated when doctors mark leave. Review and approve to confirm the new booking.
+          </p>
+
+          <div style={{ display: 'grid', gap: '8px' }}>
+            {rebookings.map((rb) => (
+              <div
+                key={rb.id}
+                style={{
+                  border: '1px solid var(--line)',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: 'var(--bg)',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span className="badge badge-opd">{rb.speciality} ({rb.visit_type})</span>
+                    <span style={{ fontWeight: 600 }}>{rb.patient_name}</span>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>Proposed with {rb.doctor_name}</span>
+                  </div>
+                  <div style={{ fontSize: '0.88rem', color: 'var(--ink)' }}>
+                    New slot: <b>{rb.date} at {rb.start_time}–{rb.end_time}</b> · <span style={{ color: 'var(--muted)' }}>{rb.reason}</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    className="btn btn-primary"
+                    style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+                    onClick={() => handleApproveRebooking(rb.id)}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+                    onClick={() => handleRejectRebooking(rb.id)}
                   >
                     Reject
                   </button>

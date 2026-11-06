@@ -35,6 +35,8 @@ export function AuthProvider({ children }) {
     setUser(null);
     localStorage.removeItem('netracare_session_token');
     localStorage.removeItem('netracare_user');
+    localStorage.removeItem('netracare_chat_thread_id');
+    localStorage.removeItem('netracare_chat_messages');
   };
 
   return (
