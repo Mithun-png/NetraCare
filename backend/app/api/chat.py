@@ -101,21 +101,55 @@ def patient_chat_endpoint(
             ai_msgs = [m for m in msgs if isinstance(m, AIMessage) and m.content]
             answer = ai_msgs[-1].content if ai_msgs else "How can I assist you with NetraCare appointments?"
 
-        # Extract sources from search_clinic_docs tool messages
+        # Extract sources from search_clinic_docs, get_lab_test_info, and skills
         sources = []
+        skills_loaded = []
+        lab_used = False
+        lab_offline = False
+
         for m in msgs:
-            if isinstance(m, ToolMessage) and m.name == "search_clinic_docs":
-                try:
-                    data = json.loads(m.content) if isinstance(m.content, str) else m.content
-                    if isinstance(data, dict):
-                        for s in data.get("sources", []):
-                            if s not in sources:
-                                sources.append(s)
-                except Exception:
-                    pass
+            if isinstance(m, ToolMessage):
+                if m.name == "search_clinic_docs":
+                    try:
+                        data = json.loads(m.content) if isinstance(m.content, str) else m.content
+                        if isinstance(data, dict):
+                            for s in data.get("sources", []):
+                                if s not in sources:
+                                    sources.append(s)
+                    except Exception:
+                        pass
+                elif m.name == "get_lab_test_info":
+                    lab_used = True
+                    if "offline" in str(m.content) or "can't check" in str(m.content).lower():
+                        lab_offline = True
+            elif isinstance(m, AIMessage) and hasattr(m, "tool_calls") and m.tool_calls:
+                for tc in m.tool_calls:
+                    if tc.get("name") in ("load_skill", "read_skill_file"):
+                        sk = tc.get("args", {}).get("name")
+                        if sk and sk not in skills_loaded:
+                            skills_loaded.append(sk)
+                    elif tc.get("name") == "get_lab_test_info":
+                        lab_used = True
+
+        # Append Lab citation
+        if lab_used and not lab_offline:
+            if "Source: CityCare Lab (partner)" not in answer and not any(k in answer.lower() for k in ("cannot interpret", "cannot advise", "cannot book")):
+                answer = f"{answer}\n\nSource: CityCare Lab (partner)"
+            if "CityCare Lab (partner)" not in sources:
+                sources.append("CityCare Lab (partner)")
+
+        # Append Skill citations
+        for sk in skills_loaded:
+            if f"Skill: {sk}" not in answer:
+                if sk == "prepare-for-visit" and "clinic_policy_faq.md" not in answer:
+                    answer = f"{answer}\n\nSkill: {sk}, clinic_policy_faq.md"
+                else:
+                    answer = f"{answer}\n\nSkill: {sk}"
+            if f"Skill: {sk}" not in sources:
+                sources.append(f"Skill: {sk}")
 
         # Format sources line if present and not already in answer
-        if sources and "Sources:" not in answer:
+        if sources and "Sources:" not in answer and not lab_used and not skills_loaded:
             answer = f"{answer}\n\nSources: {', '.join(sources)}"
 
         emergency = bool(final_state.values.get("emergency", False))

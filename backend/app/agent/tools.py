@@ -16,6 +16,8 @@ from app.services.booking import BookingService
 from app.services.reasons import ReasonCode, REASON_MESSAGES
 from app.rag.retriever import get_hybrid_retriever
 from app.rag.chat import generate_chat_answer, IDK_RESPONSE
+from app.agent.skills import load_skill, read_skill_file
+from app.agent.lab_tool import get_lab_test_info
 
 @tool
 def search_clinic_docs(query: str) -> Dict[str, Any]:
@@ -211,9 +213,11 @@ def book_appointment(
     start_time: str,
     reason: str,
     config: RunnableConfig,
+    intake_notes: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Book an appointment for the current patient.
     Requires: doctor_id, speciality, visit_type ('new' or 'follow_up'), date (YYYY-MM-DD), start_time (HH:MM), and reason.
+    Optional: intake_notes (e.g. from LASIK suitability intake).
     """
     patient_id = config.get("configurable", {}).get("patient_id")
     if not patient_id:
@@ -268,6 +272,7 @@ def book_appointment(
             role="patient",
             source="CHAT",
             reason=reason.strip(),
+            intake_notes=intake_notes.strip() if intake_notes else None,
         )
 
         if not res.ok:
@@ -475,4 +480,7 @@ ALL_TOOLS = [
     book_appointment,
     cancel_appointment,
     reschedule_appointment,
+    get_lab_test_info,
+    load_skill,
+    read_skill_file,
 ]

@@ -228,4 +228,42 @@ python run_evals.py --large
 - **Iteration 3 (Completed)**: RAG patient information chat (hybrid search BM25 + Vector, citations to clinic docs, "I don't know" threshold, conversation history rewriter, speciality routing, search debug inspector).
 - **Iteration 4 (Completed)**: LangGraph conversational booking agent, confirmation cards, staff approvals (<2hr late cancel/reschedule), doctor leave rebooking engine (R7).
 - **Iteration 5 (Completed)**: Full offline evaluation suite (`run_evals.py`), Opik observability & tracing (`netracare-dev`, `netracare-evals`), safety judge calibration (12/12), independent rule auditor, RAGAS metrics report (`evals/results/summary.md`).
-- **Iteration 6**: NetraCare Partner MCP Server, CityCare Lab MCP Client, Agent Skills (`cataract-surgery-care`, `lasik-suitability-intake`, `prepare-for-visit`, `children-visit`).
+- **Iteration 6 (Completed)**: NetraCare Partner MCP Server (`mcp_server.py` on `http://localhost:8001/mcp`), CityCare Hospital Lab MCP Client integration (`http://localhost:8002/mcp`), Agent Skills (`cataract-surgery-care`, `lasik-suitability-intake`, `prepare-for-visit`, `children-visit`), directory traversal guards, `intake_notes` on doctor appointments, and "Booked via MCP" staff badges.
+
+---
+
+## 🔌 Iteration 6: MCP & Agent Skills Architecture
+
+### 1. NetraCare MCP Server (`mcp_server.py`)
+Serves NetraCare's single-rule booking engine to external partner applications (e.g. aggregators, insurance portals) over **Streamable HTTP** at `http://localhost:8001/mcp`:
+- **`find_slots(speciality, date_from, date_to, doctor_name)`**: Discovers available 20-minute new consultation slots in AM/PM OPD sessions within the 30-day window.
+- **`book_appointment(patient_name, mobile, speciality, doctor_name, date, start_time, reason)`**:
+  - Enforces red-flag screening: acute emergencies return `RED_FLAG` status, exact emergency text, and generate an `UrgentCase(source="MCP", ...)` for Staff.
+  - Verifies patient identity: existing mobile with mismatched name returns `PATIENT_DETAILS_MISMATCH`; new mobile auto-registers patient.
+  - Enforces all 16 unified clinic booking rules (30-day window, 10-minute marks, surgery sessions, off days, doctor speciality match).
+  - Sets `source = "MCP"`.
+
+```powershell
+# Start NetraCare MCP Server (Port 8001)
+python mcp_server.py
+```
+
+### 2. CityCare Lab Partner MCP Client (`partner-lab/citycare_lab_mcp.py`)
+NetraCare's Patient Assistant connects to CityCare Hospital Lab's MCP server at `http://localhost:8002/mcp`:
+- Tool: `get_lab_test_info(test)` fetches sample rules, fasting requirements, report turnaround, and prices.
+- Transparent attribution: Automatically appends `Source: CityCare Lab (partner)` under answers using lab information.
+- Medical safety: Lab info is strictly informational (0 diagnosis, 0 test prescribing, no test bookings).
+- Offline fallback: If the partner lab server is unreachable, the assistant gracefully replies: *"I can't check CityCare Lab just now. Please ask Staff at the front desk."*
+
+```powershell
+# Start CityCare Lab Partner Server (Port 8002)
+python partner-lab/citycare_lab_mcp.py
+```
+
+### 3. Agent Skills (`skills/`)
+Clinic know-how packages dynamically loaded on demand by the Patient Assistant:
+- **`cataract-surgery-care`**: Pre-op preparation and day-by-day post-op instructions (hair washing, eye shield, screens, eating).
+- **`lasik-suitability-intake`**: Pre-assessment questions asked one at a time, contact lens stopping rules (soft: 1 week, RGP: 3 weeks), saving answers into `intake_notes` on the appointment for Dr. Fatima Khan.
+- **`prepare-for-visit`**: Generates a personalized visit checklist based on the patient's upcoming booking and speciality.
+- **`children-visit`**: Guidance for children under 16 and parents (Dr. Vikram Menon, OPD schedule, mandatory parent/guardian rule, 1½ hr visit, drops duration, ₹900 indicative cost).
+- **Directory Traversal Protection**: `read_skill_file` strictly validates paths to prevent escaping the skill folder (e.g. `../../.env` is rejected with `Access denied`).

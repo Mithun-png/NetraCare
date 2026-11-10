@@ -338,9 +338,16 @@ export default function PatientDashboard() {
                         {a.speciality} · {a.visit_type === 'new' ? 'New Visit (20m)' : 'Follow-up (10m)'}
                       </p>
                     </div>
-                    <span className={`badge badge-${a.status}`}>
-                      {a.status.replace('_', ' ')}
-                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                      <span className={`badge badge-${a.status}`}>
+                        {a.status.replace('_', ' ')}
+                      </span>
+                      {a.source && (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+                          Booked via {a.source}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '0.9rem', color: 'var(--muted)' }}>

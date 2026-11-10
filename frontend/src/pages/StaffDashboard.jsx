@@ -178,7 +178,9 @@ export default function StaffDashboard() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{c.patient_name}</span>
                     <span className="mono" style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>({c.patient_id || 'Walk-in / Unregistered'})</span>
-                    <span className="badge badge-sx">Source: {c.source}</span>
+                    <span className={`badge ${c.source === 'MCP' ? 'badge-danger' : 'badge-sx'}`}>
+                      {c.source === 'MCP' ? 'from MCP' : `Source: ${c.source}`}
+                    </span>
                   </div>
                   <p style={{ fontSize: '0.9rem', color: 'var(--danger)', fontWeight: 600, marginTop: '4px' }}>
                     {c.summary}

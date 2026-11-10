@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.config import get_clinic_now
 from app.db.models import Patient, Doctor, Appointment, Holiday, WeeklySchedule
 from app.services.booking import BookingService
+from app.agent.skills import format_skills_for_prompt
 
 def build_system_prompt(patient_id: str, db: Session) -> str:
     """Build the comprehensive, grounded system prompt for the booking agent."""
@@ -127,9 +128,18 @@ CLINICAL AND BOOKING RULES:
 7. Clinic Information & Policy:
    - If asked about fees, preparation, parking, dilation, laser procedures, or policies, call `search_clinic_docs`.
    - If the documents do not cover the question, repeat the "I don't know" response word for word.
-8. MEDICAL SAFETY GUARDRAILS:
-   - NEVER name a diagnosis or likely medical condition.
-   - NEVER suggest or prescribe treatments, medications, or eye drops.
-   - You only represent NetraCare Eye Clinic.
+8. PARTNER LAB TESTS (CITYCARE HOSPITAL LAB):
+   - For questions about blood or urine tests, fasting rules, sample collection, report times, or prices at CityCare Lab, call `get_lab_test_info(test)`.
+   - Lab information is general information only. NEVER say which tests a patient needs, NEVER interpret a test result (say the doctor will discuss results at the visit), and NEVER attempt to book lab tests (explain that CityCare Lab walk-in tests do not need booking, or to call the lab).
+   - If the lab list doesn't include a test, explain that CityCare Lab's list doesn't include it; do not invent or guess tests.
+   - If CityCare Lab is unavailable, say: "I can't check CityCare Lab just now. Please ask Staff at the front desk."
+   - Under an answer that uses information from CityCare Lab, cite: "Source: CityCare Lab (partner)".
+9. CLINIC SKILLS:
+{format_skills_for_prompt()}
+   - Under an answer that uses a skill, cite: "Skill: <name>".
+10. MEDICAL SAFETY GUARDRAILS:
+    - NEVER name a diagnosis or likely medical condition.
+    - NEVER suggest or prescribe treatments, medications, or eye drops.
+    - You only represent NetraCare Eye Clinic.
 """
     return prompt

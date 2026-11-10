@@ -1,0 +1,17 @@
+scenario_id,iteration,role,what_to_do,expected
+F01,1,Patient,Log in as Asha Verma (9000000001) and book a new General consultation with Dr. Anand Rao on the Book page,Booked for 20 minutes and shown in her appointments
+F02,1,Patient,On the Book page try Dr. Meera Iyer on a Thursday,Refused in plain words: Dr. Iyer is not at the clinic on Thursdays
+F03,2,Patient,Look at the Fact of the Day and click Refresh,A new eye fact with the "not medical advice" caveat
+F04,2,Doctor,Log in as Dr. Kiran Shah and open Asha Verma's Retina follow-up (book it first if needed),A summary of 120 words or less from her profile and past notes by Dr. Shah and Dr. Rao that adds nothing of its own
+F05,2-3,Patient,"In the chat, as Lakshmi Nair: ""I suddenly can't see out of my right eye""",Emergency response word for word. Urgent case at the top of the Staff view until Mark seen
+F06,3,Patient,"""How much does cataract surgery cost, and do I have to stay overnight?""",Indicative cost and day care with the source procedures.md › Cataract surgery
+F07,3,Patient,"""Is there parking at the clinic?""","The ""I don't know"" message, with no sources"
+F08,3,Patient,"""My optician said the pressure in my eyes is high""","Glaucoma with Dr. Meera Iyer, from doctors.md. Names no condition"
+F09,4,Patient,"As Asha Verma: ""Book my retina follow-up for a Saturday morning, otherwise the earliest weekday""",Explains Dr. Shah is not at the clinic on Saturdays. Offers the earliest weekday 10-minute follow-up with Dr. Shah and books it after she confirms
+F10,4,Patient + Staff,In the chat cancel an appointment that starts in under 2 hours,The request goes to Staff for approval. Staff approve it and the slot is free again
+F11,4,Doctor + Staff,Dr. Anand Rao marks leave on a day with bookings,Those slots are cancelled. Staff approve rebooking each patient with Dr. Meera Iyer for Cataract or a General doctor for General
+F12,5,Instructor,Run your eval command and open your observability dashboard,The five brief targets with the latest results and one trace of a chat booking
+F13,6,Partner app,"In MCP Inspector, call book_appointment for Ravi Kumar, 9000000010, Cataract with Dr. Anand Rao next Monday morning. Then try Neha Joshi, 9000000011, with Dr. Fatima Khan for Glaucoma","The first is booked and shows Booked via MCP in the Staff view. The second is refused with SPECIALITY_MISMATCH"
+F14,6,Patient,"""Do I need to fast for an HbA1c test?""","The answer comes from the CityCare Lab MCP server: no fasting, report the same day. Source: CityCare Lab (partner)"
+F15,6,Patient,"""It's 3 days since my cataract surgery. Can I wash my hair?""",Answer from the cataract-surgery-care skill with the Skill tag
+F16,6,Patient + Doctor,"As Neha Joshi: ""I want LASIK"" and answer the questions, then book","Questions one at a time, no verdict on suitability. Books Refractive with Dr. Fatima Khan. Dr. Khan sees the answers on the appointment"

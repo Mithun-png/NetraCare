@@ -32,6 +32,7 @@ class DoctorAppointmentItem(BaseModel):
     end_time: str
     reason: Optional[str]
     doctor_note: Optional[str]
+    intake_notes: Optional[str] = None
 
 @router.get("/schedule")
 def get_doctor_schedule(
@@ -82,6 +83,7 @@ def get_doctor_schedule(
             end_time=a.end_time.strftime("%H:%M"),
             reason=a.reason,
             doctor_note=a.doctor_note,
+            intake_notes=a.intake_notes,
         )
         for a in appts
     ]
@@ -128,6 +130,7 @@ def get_appointment_detail(
             "end_time": appt.end_time.strftime("%H:%M"),
             "reason": appt.reason,
             "doctor_note": appt.doctor_note,
+            "intake_notes": appt.intake_notes,
         },
     }
 

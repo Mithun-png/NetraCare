@@ -1,0 +1,13 @@
+scenario_id,tool,input,expected,reason_code,note
+M01,find_slots,"speciality=Retina, date=next Monday",allowed,,Dr. Kiran Shah's free 20-minute slots in the AM and PM sessions
+M02,find_slots,"speciality=Glaucoma, date=next Thursday",allowed,,No slots: Dr. Meera Iyer is not at the clinic on Thursdays. A clear message; not an error
+M03,book_appointment,"Ravi Kumar, 9000000010, Cataract, D1, next Monday 10:00, reason: Distance vision getting misty over the last year",allowed,,Booked. Staff view shows Booked via MCP. Ravi Kumar sees it when he logs in to the website
+M04,book_appointment,"Neha Joshi, 9000000011, Cataract, D1, next Monday 10:00, reason: Glare at night",refused,DOUBLE_BOOKED,The slot from M03
+M05,book_appointment,"Neha Joshi, 9000000011, Glaucoma, D2, next Thursday 10:00, reason: Pressure check",refused,DOCTOR_OFF,
+M06,book_appointment,"Neha Joshi, 9000000011, Cataract, D1, next Thursday 10:00, reason: Glare at night",refused,SURGERY_SESSION,
+M07,book_appointment,"Neha Joshi, 9000000011, Glaucoma, D4, next Tuesday 15:00, reason: Pressure check",refused,SPECIALITY_MISMATCH,Dr. Fatima Khan does not cover Glaucoma
+M08,book_appointment,"Neha Joshi, 9000000011, General, D1, a Monday more than 30 days from today 10:00, reason: Eye test",refused,BEYOND_30_DAYS,
+M09,book_appointment,"Ravi Kumar, 9000000010, Cataract, D2, next Friday 10:00, reason: Second opinion",refused,ACTIVE_BOOKING_EXISTS,Ravi Kumar already has the Cataract booking from M03
+M10,book_appointment,"Rahul Kumar, 9000000010, General, D3, next Monday 11:00, reason: Eye test",refused,PATIENT_DETAILS_MISMATCH,The mobile belongs to Ravi Kumar. Never book into someone else's record
+M11,book_appointment,"Sameer Khan, 9000000099, General, D3, next Monday 11:00, reason: New glasses needed",allowed,,A new mobile creates a new patient, as at website login
+M12,book_appointment,"Neha Joshi, 9000000011, Retina, D3, next Monday 12:00, reason: Since an hour a dark curtain is coming down over my right eye",red_flag,RED_FLAG,No booking. The emergency response word for word. An urgent case from MCP at the top of the Staff view

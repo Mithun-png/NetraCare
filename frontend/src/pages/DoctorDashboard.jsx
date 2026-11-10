@@ -191,6 +191,20 @@ export default function DoctorDashboard() {
                     </p>
                   )}
 
+                  {a.intake_notes && (
+                    <div style={{
+                      marginTop: '8px',
+                      padding: '8px 12px',
+                      background: 'var(--accent-soft)',
+                      borderRadius: '6px',
+                      fontSize: '0.85rem',
+                      whiteSpace: 'pre-wrap',
+                    }}>
+                      <b>Pre-Assessment Intake Notes:</b>
+                      <div style={{ marginTop: '4px' }}>{a.intake_notes}</div>
+                    </div>
+                  )}
+
                   {a.doctor_note && (
                     <p style={{ fontSize: '0.88rem', color: 'var(--success)', marginTop: '4px' }}>
                       <b>Clinical Note:</b> {a.doctor_note}

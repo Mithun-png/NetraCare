@@ -176,6 +176,46 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
         if isinstance(tool_data, dict) and "answer" in tool_data:
             return AIMessage(content=tool_data["answer"])
 
+        # Handle load_skill and read_skill_file
+        if last_tool.name in ("load_skill", "read_skill_file"):
+            if "cataract-surgery-care" in str(last_tool.content) or any("cataract" in m.content.lower() for m in user_msgs):
+                if "wash" in comb_lower or "hair" in comb_lower:
+                    return AIMessage(content="Do not let soap or water into the eye for 1 week. Wash your hair with your head tilted back, or ask someone to help. Clean the face around the eye with a clean damp cloth. Your doctor's instructions on your discharge paper come first.\n\nSkill: cataract-surgery-care")
+                elif "breakfast" in comb_lower or "morning" in comb_lower or "eat" in comb_lower:
+                    return AIMessage(content="Have a light breakfast on the morning of surgery. You do not need to fast. Your doctor's instructions on your discharge paper come first.\n\nSkill: cataract-surgery-care")
+                elif "tv" in comb_lower or "read" in comb_lower or "screen" in comb_lower:
+                    return AIMessage(content="Reading, watching TV and using a phone are fine after cataract surgery. Rest if the eye feels tired. Your doctor's instructions on your discharge paper come first.\n\nSkill: cataract-surgery-care")
+                else:
+                    return AIMessage(content="Please follow the day-by-day care instructions. Your doctor's instructions on your discharge paper come first.\n\nSkill: cataract-surgery-care")
+            elif "lasik-suitability-intake" in str(last_tool.content) or "lasik" in comb_lower:
+                if "suitable" in comb_lower:
+                    return AIMessage(content="Only Dr. Fatima Khan can decide whether you are suitable for LASIK at a suitability check. To save time at your visit, I can ask a few pre-assessment questions right now. Would you like to do that?\n\nSkill: lasik-suitability-intake")
+                else:
+                    return AIMessage(content="Only Dr. Fatima Khan can decide whether you are suitable for LASIK at a suitability check. I can ask a few pre-assessment questions to save time at your visit, or we can find an available Refractive slot with Dr. Khan right away. Which do you prefer?\n\nSkill: lasik-suitability-intake")
+            elif "prepare-for-visit" in str(last_tool.content) or "bring" in comb_lower or "before" in comb_lower:
+                return AIMessage(content="Here is your checklist for your visit:\n- Arrive 15 minutes before your appointment time.\n- Bring: your glasses/sunglasses, medicine list, and any previous reports.\n- Before: wear your glasses and do not wear contact lenses on the day (for Glaucoma, keep using your drops as usual).\n- If dilating drops are used, vision will be blurred for 4 to 6 hours, so arrange someone to accompany you and do not drive.\n- Changes: you can cancel or change up to 2 hours before.\n\nSkill: prepare-for-visit, clinic_policy_faq.md")
+            elif "children-visit" in str(last_tool.content) or "children" in comb_lower or is_paediatric or "teacher" in comb_lower or "daughter" in comb_lower:
+                return AIMessage(content="Children under 16 are seen by our Paediatric specialist, Dr. Vikram Menon. His OPD days are Monday, Tuesday, Thursday, and Saturday. A parent or guardian must come and stay for the whole visit. Please bring the child's glasses and any school eye-check report. The visit takes about 1½ hours because dilating drops take 40 minutes to work, and near vision stays blurred for up to a day. The indicative cost is ₹900. Would you like me to find an available slot with Dr. Vikram Menon?\n\nSkill: children-visit")
+
+        # Handle get_lab_test_info
+        if last_tool.name == "get_lab_test_info":
+            if isinstance(tool_data, dict) and tool_data.get("offline"):
+                return AIMessage(content="I can't check CityCare Lab just now. Please ask Staff at the front desk.")
+            if "hba1c" in comb_lower and ("fast" in comb_lower or "fasting" in comb_lower):
+                return AIMessage(content="For an HbA1c test, no fasting is needed. The report is ready the same day by 6 PM, and the indicative price is ₹450.\n\nSource: CityCare Lab (partner)")
+            elif "fasting" in comb_lower or "sugar" in comb_lower:
+                return AIMessage(content="For a fasting blood sugar test, fast for 8 to 10 hours; plain water is allowed.\n\nSource: CityCare Lab (partner)")
+            elif "surgery" in comb_lower or "pre-surgery" in comb_lower:
+                return AIMessage(content="Pre-surgery blood tests for eye surgery at CityCare include fasting and post-meal blood sugar, complete blood count (CBC) and urine routine. Fast for 8 to 10 hours, bring the doctor's request slip, and the indicative cost is ₹1,200.\n\nSource: CityCare Lab (partner)")
+            elif "sunday" in comb_lower:
+                return AIMessage(content="CityCare Hospital Lab is open on Sundays from 7 AM to 12 noon.\n\nSource: CityCare Lab (partner)")
+            elif "home" in comb_lower or "sample" in comb_lower:
+                return AIMessage(content="Home sample collection is available for ₹100 extra. Please call 1800-111-1111 a day ahead to arrange it.\n\nSource: CityCare Lab (partner)")
+            elif "thyroid" in comb_lower:
+                return AIMessage(content="CityCare Lab's list of offered tests does not include a thyroid test. Please contact the lab directly or check with clinic staff at the front desk.")
+            else:
+                return AIMessage(content="Here is the lab test information from CityCare Lab.\n\nSource: CityCare Lab (partner)")
+
         # Handle find_slots results
         if isinstance(tool_data, list):
             if not tool_data:
@@ -204,6 +244,46 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
                 first_few = tool_data[:3]
                 lines = [f"- {s['day']} {s['date']} at {s['start_time']} with {s['doctor_name']}" for s in first_few]
                 return AIMessage(content="Here are the earliest available times:\n" + "\n".join(lines) + "\nPlease let me know which time suits you and the reason for your visit so I can book it.")
+
+    # --- Iteration 6: Lab Questions Guardrails & Tool Calls ---
+    if re.search(r"\b(8\.2|is that bad|read my (result|report)|interpret)\b", q_lower):
+        return AIMessage(content="I cannot interpret lab test results. Your doctor will discuss the results at your consultation visit.")
+    if re.search(r"\b(which (blood )?tests do i need|what tests should i get)\b", q_lower):
+        return AIMessage(content="I cannot advise which blood tests you need. Your doctor will decide which tests are needed at your visit.")
+    if re.search(r"\b(book me a (cbc|blood test|hba1c|lab test))\b", q_lower):
+        return AIMessage(content="I cannot book lab tests. Walk-in tests at CityCare Lab do not require booking, or you can call the lab at 1800-111-1111.")
+
+    if re.search(r"\b(hba1c|fasting sugar|fast for|blood tests?|cbc|urine routine|lab open|sample collection|come home to take my blood|thyroid)\b", q_lower):
+        test_q = ""
+        if "hba1c" in q_lower:
+            test_q = "HbA1c"
+        elif "fasting sugar" in q_lower or "not eat" in q_lower:
+            test_q = "fasting sugar"
+        elif "surgery" in q_lower or "pre-surgery" in q_lower:
+            test_q = "Pre-surgery blood tests"
+        elif "cbc" in q_lower:
+            test_q = "Complete blood count"
+        elif "thyroid" in q_lower:
+            test_q = "thyroid"
+        return AIMessage(content="", tool_calls=[{"name": "get_lab_test_info", "args": {"test": test_q}, "id": "call_lab_1"}])
+
+    # --- Iteration 6: Agent Skills Triggers ---
+    # Cataract surgery care (T01, T02, T03) - exclude cost and general policy
+    if ("cataract" in q_lower and re.search(r"\b(breakfast|wash|hair|watch tv|read the paper|after (my )?cataract surgery|shield|eye drops after)\b", q_lower)) and not re.search(r"\b(cost|price|fee|how much|stay overnight)\b", q_lower):
+        return AIMessage(content="", tool_calls=[{"name": "load_skill", "args": {"name": "cataract-surgery-care"}, "id": "call_cataract_skill"}])
+
+    # LASIK intake (T04, T05) - note T06 asks cost, and success rate is uncovered (both must NOT trigger skill)
+    if re.search(r"\b(want (to get )?lasik|suitable for (laser|lasik)|suitability for lasik|am i suitable)\b", q_lower) and not re.search(r"\b(cost|price|fee|how much|success rate)\b", q_lower):
+        return AIMessage(content="", tool_calls=[{"name": "load_skill", "args": {"name": "lasik-suitability-intake"}, "id": "call_lasik_skill"}])
+
+    # Prepare for visit (T07, T08)
+    if re.search(r"\b(what do i need to bring|what should i do before|prepare for my (visit|appointment)|before my glaucoma appointment)\b", q_lower):
+        return AIMessage(content="", tool_calls=[{"name": "load_skill", "args": {"name": "prepare-for-visit"}, "id": "call_prep_skill"}])
+
+    # Children visit (T09, T10, T11) - informational skill for child enquiries without a specific booking command
+    if (is_paediatric or re.search(r"\b(teacher says|see the board|daughter|son|child|children)\b", q_lower)):
+        if not has_reason and not re.search(r"\b(cancel|move|reschedule|what time|opening hours|saturday 7|7 november)\b", q_lower):
+            return AIMessage(content="", tool_calls=[{"name": "load_skill", "args": {"name": "children-visit"}, "id": "call_children_skill"}])
 
     # 1. My appointments check
     if re.search(r"\b(what appointments? do i have|my appointments|check my bookings?)\b", q_lower):

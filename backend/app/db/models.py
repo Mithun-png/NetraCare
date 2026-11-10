@@ -86,6 +86,7 @@ class Appointment(Base):
     source = Column(String(20), default="WEBSITE", nullable=False)  # WEBSITE, CHAT, STAFF, MCP
     reason = Column(Text, nullable=True)
     doctor_note = Column(Text, nullable=True)
+    intake_notes = Column(Text, nullable=True)
     rescheduled_from = Column(String(20), nullable=True)
     created_at = Column(DateTime, default=utc_now, nullable=False)
 

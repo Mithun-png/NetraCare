@@ -168,6 +168,7 @@ class BookingService:
         source: str = "WEBSITE",
         reason: Optional[str] = None,
         ignore_appointment_id: Optional[str] = None,
+        intake_notes: Optional[str] = None,
     ) -> BookingResult:
         """Validate and book an appointment through the unified rule engine."""
         now = get_clinic_now()
@@ -386,6 +387,7 @@ class BookingService:
             end_time=end_time,
             source=source,
             reason=reason,
+            intake_notes=intake_notes,
         )
         db.add(new_appt)
 

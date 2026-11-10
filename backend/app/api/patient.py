@@ -47,6 +47,7 @@ class AppointmentDetailResponse(BaseModel):
     end_time: str
     reason: Optional[str]
     doctor_note: Optional[str]
+    source: Optional[str] = "WEBSITE"
 
 @router.get("/appointments", response_model=List[AppointmentDetailResponse])
 def get_my_appointments(
@@ -76,6 +77,7 @@ def get_my_appointments(
             end_time=a.end_time.strftime("%H:%M"),
             reason=a.reason,
             doctor_note=a.doctor_note,
+            source=a.source,
         )
         for a in appts
     ]
