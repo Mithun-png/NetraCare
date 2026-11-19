@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
+import GrainOverlay from './components/GrainOverlay';
+import NetraCareLogo from './components/NetraCareLogo';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import PatientDashboard from './pages/PatientDashboard';
@@ -35,10 +37,28 @@ function MainApp() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', width: '100%', overflowX: 'hidden' }}>
+      {/* 0.35 Opacity Analog Grain Texture Overlay */}
+      <GrainOverlay />
+
+      {/* Floating Glassy Pill-Shaped Navigation Bar */}
       <Navbar currentTab={currentTab} setCurrentTab={setCurrentTab} />
 
-      <main style={{ flex: 1, paddingBottom: '48px' }}>
+      {/* Main Centered Application Content */}
+      <main
+        style={{
+          flex: 1,
+          paddingTop: '88px',
+          paddingBottom: '48px',
+          position: 'relative',
+          zIndex: 1,
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          boxSizing: 'border-box',
+        }}
+      >
         {currentTab === 'home' && (
           <Home
             onNavigateToLogin={() => setCurrentTab('login')}
@@ -75,17 +95,33 @@ function MainApp() {
         )}
       </main>
 
-      <footer style={{
-        background: '#fff',
-        borderTop: '1px solid var(--line)',
-        padding: '20px 0',
-        textAlign: 'center',
-        color: 'var(--muted)',
-        fontSize: '0.85rem',
-      }}>
-        <div className="container">
-          <p>NetraCare AI Front Desk & Care Coordination · Fictional Clinic Capstone · All Data Synthetic</p>
-          <p style={{ marginTop: '4px' }}>Asia/Kolkata Timezone · Zero Double Bookings Guarantee · Deterministic Red-Flag Triage</p>
+      {/* Glassy Minimalist Footer */}
+      <footer
+        style={{
+          width: '100%',
+          background: 'rgba(255, 255, 255, 0.85)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderTop: '1px solid var(--line)',
+          padding: '28px 20px',
+          textAlign: 'center',
+          color: 'var(--muted)',
+          fontSize: '0.9rem',
+          position: 'relative',
+          zIndex: 1,
+          boxSizing: 'border-box',
+        }}
+      >
+        <div className="container" style={{ padding: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
+            <NetraCareLogo size={24} />
+            <span style={{ fontWeight: 600, color: 'var(--ink)' }}>NetraCare AI Front Desk & Care Coordination</span>
+            <span>·</span>
+            <span className="cursive" style={{ fontSize: '18px', color: 'var(--muted)' }}>gentle clinical precision</span>
+          </div>
+          <p style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>
+            Asia/Kolkata Timezone · Zero Double Bookings Guarantee · Deterministic Emergency Red-Flag Triage
+          </p>
         </div>
       </footer>
     </div>
@@ -99,4 +135,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-

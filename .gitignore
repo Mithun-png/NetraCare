@@ -32,5 +32,8 @@ dist/
 # IDE / OS
 .vscode/
 .idea/
+.codex/
+.gemini/
+.impeccable/
 .DS_Store
 Thumbs.db
