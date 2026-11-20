@@ -11,7 +11,7 @@ Handles:
 8. External formatting of sources from chunk metadata.
 """
 import re
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
