@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: netracare
+    runtime: python
+    plan: free
+    buildCommand: "./render-build.sh"
+    startCommand: "python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: PYTHONPATH
+        value: backend
+      - key: APP_NAME
+        value: "NetraCare AI Front Desk"
+      - key: CLINIC_TIMEZONE
+        value: "Asia/Kolkata"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPIK_API_KEY
+        sync: false
+      - key: LANGCHAIN_API_KEY
+        sync: false

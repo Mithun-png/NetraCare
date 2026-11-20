@@ -1,9 +1,12 @@
 """NetraCare FastAPI Application.
 Entry point for the backend service.
 """
+from pathlib import Path
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.config import settings
 from app.db.session import init_db, SessionLocal
@@ -58,6 +61,25 @@ def health_check():
         "timezone": settings.CLINIC_TIMEZONE,
         "rules_enforced": True,
     }
+
+# Mount React frontend static files when built
+frontend_dist = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+if frontend_dist.exists() and (frontend_dist / "index.html").exists():
+    if (frontend_dist / "assets").exists():
+        app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
+
+    @app.api_route("/", methods=["GET", "HEAD"])
+    async def serve_index():
+        return FileResponse(str(frontend_dist / "index.html"))
+
+    @app.api_route("/{full_path:path}", methods=["GET", "HEAD"])
+    async def serve_spa(full_path: str):
+        if full_path.startswith("api/") or full_path in ["docs", "openapi.json", "redoc"]:
+            raise HTTPException(status_code=404, detail="Not found")
+        target_file = frontend_dist / full_path
+        if target_file.is_file():
+            return FileResponse(str(target_file))
+        return FileResponse(str(frontend_dist / "index.html"))
 
 if __name__ == "__main__":
     import uvicorn
