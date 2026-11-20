@@ -18,8 +18,8 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: GEMINI_API_KEY
-        sync: false
+        value: ""
       - key: OPIK_API_KEY
-        sync: false
+        value: ""
       - key: LANGCHAIN_API_KEY
-        sync: false
+        value: ""
