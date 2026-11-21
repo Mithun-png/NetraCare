@@ -100,5 +100,28 @@ export const api = {
     request(`/staff/rebookings/${encodeURIComponent(id)}/reject`, { method: 'POST' }),
   searchPatients: (q) => request(`/staff/patients${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   getSearchDebug: (q) => request(`/staff/search-debug?q=${encodeURIComponent(q)}`),
+  updateAppointmentStage: (id, payload) =>
+    request(`/staff/appointments/${encodeURIComponent(id)}/stage`, { method: 'PATCH', body: JSON.stringify(payload) }),
+
+  // Intake & OCR
+  uploadOcrPrescription: (formData) => {
+    const token = getSessionToken();
+    return fetch(`${API_BASE}/intake/ocr`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { 'X-Session-Data': token } : {}),
+      },
+      body: formData,
+    }).then(async (res) => {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail?.message || data.detail || 'OCR upload failed');
+      return data;
+    });
+  },
+  attachOcrToAppointment: (appointmentId, ocrText) =>
+    request(`/patient/appointments/${encodeURIComponent(appointmentId)}/attach-ocr`, {
+      method: 'POST',
+      body: JSON.stringify({ ocr_text: ocrText }),
+    }),
 };
 

@@ -21,6 +21,7 @@ class PatientChatRequest(BaseModel):
     message: Optional[str] = Field(None, max_length=500, description="Patient message up to 500 characters.")
     thread_id: Optional[str] = Field(None, description="Conversation thread identifier for memory.")
     confirm: Optional[bool] = Field(None, description="Confirm (true) or decline (false) for a pending confirmation card.")
+    selected_option: Optional[Any] = Field(None, description="Selected option for HITL prompts (e.g. alternative doctor or wait slot).")
     history: Optional[List[Dict[str, str]]] = Field(default_factory=list, description="Legacy history field.")
 
 class PatientChatResponse(BaseModel):
@@ -60,8 +61,10 @@ def patient_chat_endpoint(
         config["callbacks"] = [tracer]
 
     try:
-        # 1. Handle confirmation card response
-        if req.confirm is not None:
+        # 1. Handle confirmation card or HITL selection
+        if req.selected_option is not None:
+            list(agent_graph.stream(Command(resume=req.selected_option), config))
+        elif req.confirm is not None:
             list(agent_graph.stream(Command(resume=req.confirm), config))
         elif req.message and req.message.strip():
             msg_text = req.message.strip()
@@ -83,7 +86,7 @@ def patient_chat_endpoint(
 
             list(agent_graph.stream({"messages": history_msgs + [HumanMessage(content=msg_text)]}, config))
         else:
-            raise HTTPException(status_code=400, detail="Either 'message' or 'confirm' must be provided.")
+            raise HTTPException(status_code=400, detail="Either 'message', 'confirm', or 'selected_option' must be provided.")
 
         # 2. Extract final state
         final_state = agent_graph.get_state(config)
@@ -96,7 +99,7 @@ def patient_chat_endpoint(
         # Determine answer
         msgs = final_state.values.get("messages", [])
         if pending_action:
-            answer = pending_action.get("summary", "Please confirm your action:")
+            answer = pending_action.get("message") or pending_action.get("summary", "Please confirm your action:")
         else:
             ai_msgs = [m for m in msgs if isinstance(m, AIMessage) and m.content]
             answer = ai_msgs[-1].content if ai_msgs else "How can I assist you with NetraCare appointments?"

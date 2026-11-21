@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { Calendar, Clock, CheckCircle2, FileText, User, Sparkles, AlertCircle } from 'lucide-react';
+import DilationCountdownBadge from '../components/DilationCountdownBadge';
+import { Calendar, Clock, CheckCircle2, FileText, User, Sparkles, AlertCircle, Eye } from 'lucide-react';
 
 export default function DoctorDashboard() {
   const { user } = useAuth();
@@ -147,14 +148,15 @@ export default function DoctorDashboard() {
               <div
                 key={a.id}
                 style={{
-                  border: '1px solid var(--line)',
+                  border: a.visit_stage === 'READY_FOR_DOCTOR' ? '1.5px solid #10b981' : '1px solid var(--line)',
                   borderRadius: '10px',
                   padding: '16px 20px',
                   display: 'grid',
-                  gridTemplateColumns: '120px 1fr auto',
+                  gridTemplateColumns: '130px 1fr auto',
                   gap: '16px',
                   alignItems: 'center',
-                  background: a.status === 'completed' ? 'var(--bg)' : '#fff',
+                  background: a.visit_stage === 'READY_FOR_DOCTOR' ? '#f0fdf4' : a.status === 'completed' ? 'var(--bg)' : '#fff',
+                  boxShadow: a.visit_stage === 'READY_FOR_DOCTOR' ? '0 4px 14px rgba(16, 185, 129, 0.12)' : 'none',
                 }}
               >
                 <div>
@@ -164,9 +166,17 @@ export default function DoctorDashboard() {
                   <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
                     to {a.end_time}
                   </div>
-                  <span className={`badge badge-${a.status}`} style={{ marginTop: '4px' }}>
-                    {a.status}
-                  </span>
+                  <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                    <span className={`badge badge-${a.status}`}>
+                      {a.status}
+                    </span>
+                    <DilationCountdownBadge
+                      visitStage={a.visit_stage || 'SCHEDULED'}
+                      dilationStartedAt={a.dilation_started_at}
+                      durationMins={a.dilation_duration_mins || 35}
+                      serverNow={scheduleData?.server_now}
+                    />
+                  </div>
                 </div>
 
                 <div>

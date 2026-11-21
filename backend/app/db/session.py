@@ -19,8 +19,20 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def init_db():
-    """Create all tables in the database."""
+    """Create all tables in the database and ensure schema migrations."""
     Base.metadata.create_all(bind=engine)
+    from sqlalchemy import inspect, text
+    with engine.connect() as conn:
+        inspector = inspect(engine)
+        if "appointments" in inspector.get_table_names():
+            cols = {c["name"] for c in inspector.get_columns("appointments")}
+            if "visit_stage" not in cols:
+                conn.execute(text("ALTER TABLE appointments ADD COLUMN visit_stage VARCHAR(30) DEFAULT 'SCHEDULED'"))
+            if "dilation_started_at" not in cols:
+                conn.execute(text("ALTER TABLE appointments ADD COLUMN dilation_started_at DATETIME"))
+            if "dilation_duration_mins" not in cols:
+                conn.execute(text("ALTER TABLE appointments ADD COLUMN dilation_duration_mins INTEGER DEFAULT 35"))
+            conn.commit()
 
 def get_db():
     """FastAPI dependency to get a database session."""

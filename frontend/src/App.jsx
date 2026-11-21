@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ChatProvider } from './context/ChatContext';
 import Navbar from './components/Navbar';
 import GrainOverlay from './components/GrainOverlay';
 import NetraCareLogo from './components/NetraCareLogo';
+import FloatingChatWidget from './components/FloatingChatWidget';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import PatientDashboard from './pages/PatientDashboard';
@@ -95,6 +97,14 @@ function MainApp() {
         )}
       </main>
 
+      {/* Floating Bottom-Right Chat Launcher Widget */}
+      <FloatingChatWidget
+        onNavigateToFullChat={() => {
+          if (user?.role === 'patient') setCurrentTab('patient');
+          else setCurrentTab('login');
+        }}
+      />
+
       {/* Glassy Minimalist Footer */}
       <footer
         style={{
@@ -131,7 +141,9 @@ function MainApp() {
 export default function App() {
   return (
     <AuthProvider>
-      <MainApp />
+      <ChatProvider>
+        <MainApp />
+      </ChatProvider>
     </AuthProvider>
   );
 }

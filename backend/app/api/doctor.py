@@ -33,6 +33,10 @@ class DoctorAppointmentItem(BaseModel):
     reason: Optional[str]
     doctor_note: Optional[str]
     intake_notes: Optional[str] = None
+    visit_stage: Optional[str] = "SCHEDULED"
+    dilation_started_at: Optional[str] = None
+    dilation_duration_mins: Optional[int] = 35
+    server_now: Optional[str] = None
 
 @router.get("/schedule")
 def get_doctor_schedule(
@@ -69,6 +73,7 @@ def get_doctor_schedule(
 
     pat_map = {p.id: p.name for p in db.query(Patient).all()}
 
+    clinic_now_iso = now.isoformat()
     appointment_list = [
         DoctorAppointmentItem(
             id=a.id,
@@ -84,6 +89,10 @@ def get_doctor_schedule(
             reason=a.reason,
             doctor_note=a.doctor_note,
             intake_notes=a.intake_notes,
+            visit_stage=getattr(a, "visit_stage", "SCHEDULED") or "SCHEDULED",
+            dilation_started_at=a.dilation_started_at.isoformat() if getattr(a, "dilation_started_at", None) else None,
+            dilation_duration_mins=getattr(a, "dilation_duration_mins", 35) or 35,
+            server_now=clinic_now_iso,
         )
         for a in appts
     ]
@@ -95,6 +104,7 @@ def get_doctor_schedule(
         "doctor_name": doctor.name,
         "sessions": sched_summary,
         "appointments": appointment_list,
+        "server_now": clinic_now_iso,
     }
 
 @router.get("/appointments/{appointment_id}")

@@ -11,7 +11,7 @@ from langgraph.types import interrupt
 
 from app.config import get_clinic_now, CLINIC_TZ
 from app.db.session import SessionLocal
-from app.db.models import Doctor, Patient, Appointment, WeeklySchedule, Holiday, Approval
+from app.db.models import Doctor, Patient, Appointment, WeeklySchedule, Holiday, Approval, DoctorLeave
 from app.services.booking import BookingService
 from app.services.reasons import ReasonCode, REASON_MESSAGES
 from app.rag.retriever import get_hybrid_retriever
@@ -236,6 +236,98 @@ def book_appointment(
             date_display = d_val.strftime("%a %d %b")
         except Exception:
             return {"result": "refused", "message": "Invalid date or time format. Please use YYYY-MM-DD and HH:MM."}
+
+        # --- Iteration 7 Feature B: Check Doctor Availability (DOCTOR_OFF, SURGERY_SESSION, DOUBLE_BOOKED) ---
+        now = get_clinic_now()
+        leave = db.query(DoctorLeave).filter(
+            DoctorLeave.doctor_id == doctor_id.strip(),
+            DoctorLeave.date == d_val,
+        ).first()
+
+        session_kind = "AM" if t_val < dt_time(13, 0) else "PM"
+        sched = db.query(WeeklySchedule).filter(
+            WeeklySchedule.doctor_id == doctor_id.strip(),
+            WeeklySchedule.day == day_str,
+            WeeklySchedule.session == session_kind,
+        ).first()
+
+        existing_slot = db.query(Appointment).filter(
+            Appointment.doctor_id == doctor_id.strip(),
+            Appointment.date == d_val,
+            Appointment.start_time == t_val,
+            Appointment.status.in_(["booked", "pending_staff"]),
+        ).first()
+
+        unavail_reason = None
+        unavail_code = None
+        if leave:
+            unavail_code = ReasonCode.DOCTOR_OFF
+            unavail_reason = f"{doc_name} is on leave on that date"
+        elif sched and sched.status == "SURGERY":
+            unavail_code = ReasonCode.SURGERY_SESSION
+            unavail_reason = f"{doc_name} is in a surgery session during that time"
+        elif sched and sched.status == "OFF":
+            unavail_code = ReasonCode.DOCTOR_OFF
+            unavail_reason = f"{doc_name} is not scheduled at the clinic during that time"
+        elif existing_slot:
+            unavail_code = ReasonCode.DOUBLE_BOOKED
+            unavail_reason = f"that time slot is already booked"
+
+        if unavail_code:
+            # Look up patient age for paediatric gate
+            patient = db.query(Patient).filter(Patient.id == patient_id).first()
+            p_age = (now.year - patient.year_of_birth) if (patient and patient.year_of_birth) else None
+
+            alts = BookingService.find_alternatives(
+                db=db,
+                speciality=speciality,
+                requested_doctor_id=doctor_id.strip(),
+                requested_date=d_val,
+                patient_age=p_age,
+            )
+
+            options = []
+            if alts.get("same_speciality_alternatives"):
+                options.append({
+                    "id": "switch_doctor",
+                    "label": f"Switch to another {speciality} specialist",
+                    "slots": alts["same_speciality_alternatives"],
+                })
+            if alts.get("same_doctor_next_slots"):
+                options.append({
+                    "id": "wait_next_slot",
+                    "label": f"Wait for {doc_name}'s next slot",
+                    "slots": alts["same_doctor_next_slots"],
+                })
+
+            hitl_payload = {
+                "type": "HITL_DOCTOR_UNAVAILABLE",
+                "reason_code": unavail_code.value,
+                "requested_doctor": doc_name,
+                "message": f"{doc_name} is unavailable ({unavail_reason}). Would you like to switch to another specialist or wait for {doc_name}'s next open slot?",
+                "options": options,
+            }
+
+            user_choice = interrupt(hitl_payload)
+
+            # If user selected an alternative slot from the HITL prompt
+            if isinstance(user_choice, dict) and "doctor_id" in user_choice and "date" in user_choice:
+                doctor_id = user_choice["doctor_id"]
+                date = user_choice["date"]
+                start_time = user_choice["start_time"]
+                doc = db.query(Doctor).filter(Doctor.id == doctor_id).first()
+                doc_name = doc.name if doc else doctor_id
+                d_val = datetime.strptime(date.strip(), "%Y-%m-%d").date()
+                t_parts = start_time.strip().split(":")
+                t_val = dt_time(int(t_parts[0]), int(t_parts[1]))
+                day_str = BookingService.get_day_abbr(d_val)
+                date_display = d_val.strftime("%a %d %b")
+            elif user_choice is False:
+                return {
+                    "result": "refused",
+                    "reason_code": unavail_code.value,
+                    "message": f"Booking cancelled. {doc_name} is unavailable: {unavail_reason}.",
+                }
 
         # Human-in-the-loop interrupt
         summary = f"Book {doc_name}, {speciality} {visit_type.replace('_', '-')}, {date_display}, {start_time} ({duration} min)?"

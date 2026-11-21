@@ -31,7 +31,7 @@ RED_FLAG_PATTERNS = [
         [
             r"\bsudden(ly)?\s+(can'?t|cannot|couldn'?t)\s+see\b",
             r"\bsudden(ly)?\s+lost\s+my\s+vision\b",
-            r"\bsudden\s+loss\s+of\s+vision\b",
+            r"\bsudden\s+(vision\s+loss|loss\s+of\s+vision)\b",
             r"\blost\s+my\s+vision\s+in\s+one\s+eye\s+overnight\b",
             r"\bvision\s+went\s+black\b",
             r"\beverything\s+went\s+dark\b",
@@ -49,7 +49,7 @@ RED_FLAG_PATTERNS = [
         [
             r"\bcurtain\s+(is\s+|has\s+)?(coming|came|drawn|pulled)\s+down\b",
             r"\bcurtain\s+(over|across)\b",
-            r"\bcurtain\b.*\b(coming|came|down|shadow|vision|eye)\b",
+            r"\bcurtain\b.*\b(coming|came|down|falling|shadow|vision|eye|sight)\b",
             r"\bdark\s+shadow\s+moving\s+across\b",
             r"\bshadow\s+over\s+(half\s+of\s+)?my\s+(sight|vision|eye)\b",
             r"\bpulled\s+a\s+blind\s+down\b",

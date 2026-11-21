@@ -60,3 +60,13 @@ def get_current_doctor(user: CurrentUser = Depends(require_role(["doctor"]))) ->
 def get_current_staff(user: CurrentUser = Depends(require_role(["staff", "admin", "sub_admin"]))) -> CurrentUser:
     return user
 
+def get_current_user_optional(
+    x_session_data: Optional[str] = Header(None, alias="X-Session-Data"),
+    authorization: Optional[str] = Header(None, alias="Authorization"),
+) -> Optional[CurrentUser]:
+    """Optionally extract user session, returns None if not authenticated."""
+    try:
+        return get_current_user(x_session_data, authorization)
+    except HTTPException:
+        return None
+

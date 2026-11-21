@@ -745,3 +745,96 @@ class BookingService:
             "affected_count": len(affected_appts),
             "proposals": proposals,
         }
+
+    @classmethod
+    def find_alternatives(
+        cls,
+        db: Session,
+        speciality: str,
+        requested_doctor_id: str,
+        requested_date: dt_date,
+        patient_age: Optional[int] = None,
+        max_slots_per_option: int = 3,
+    ) -> Dict[str, Any]:
+        """Find alternative slots when requested slot is unavailable (DOCTOR_OFF, SURGERY_SESSION, DOUBLE_BOOKED).
+        
+        Returns:
+            - same_doctor_next_slots: earliest available slots for the same doctor within 30 days
+            - same_speciality_alternatives: earliest available slots with other doctors in the same speciality
+            - is_paediatric: boolean indicating if paediatric rule (strictly Dr. Vikram Menon D5) applies
+        """
+        now = get_clinic_now()
+        today = now.date()
+        max_date = today + timedelta(days=30)
+
+        # Paediatric gate: age < 16 MUST see Dr. Vikram Menon (D5)
+        is_paediatric = patient_age is not None and patient_age < 16
+        
+        req_doc = db.query(Doctor).filter(Doctor.id == requested_doctor_id).first()
+        req_doc_name = req_doc.name if req_doc else requested_doctor_id
+
+        same_doctor_slots = []
+        alt_specialist_slots = []
+
+        # 1. Search for next open slots for the SAME doctor (starting from requested_date)
+        cur_date = requested_date
+        while cur_date <= max_date and len(same_doctor_slots) < max_slots_per_option:
+            if cur_date.weekday() != 6:  # Skip Sunday
+                avail = cls.find_slots(db, requested_doctor_id, cur_date, visit_type="new")
+                for s in avail:
+                    same_doctor_slots.append({
+                        "doctor_id": requested_doctor_id,
+                        "doctor_name": req_doc_name,
+                        "speciality": speciality,
+                        "date": cur_date.isoformat(),
+                        "start_time": s["start_time"],
+                        "end_time": s["end_time"],
+                    })
+                    if len(same_doctor_slots) >= max_slots_per_option:
+                        break
+            cur_date += timedelta(days=1)
+
+        # 2. Search for alternative specialists
+        if is_paediatric:
+            # Paediatric rule: CANNOT switch to another doctor; only Dr. Vikram Menon is allowed
+            alt_specialist_slots = []
+        else:
+            # Find other doctors covering the speciality
+            other_docs = (
+                db.query(Doctor)
+                .filter(Doctor.id != requested_doctor_id, Doctor.active == True)
+                .all()
+            )
+            matching_other_docs = [
+                d for d in other_docs
+                if speciality.lower() in [s.lower() for s in d.get_speciality_list()]
+            ]
+
+            cur_date = requested_date
+            while cur_date <= max_date and len(alt_specialist_slots) < max_slots_per_option:
+                if cur_date.weekday() != 6:
+                    for od in matching_other_docs:
+                        avail = cls.find_slots(db, od.id, cur_date, visit_type="new")
+                        for s in avail:
+                            alt_specialist_slots.append({
+                                "doctor_id": od.id,
+                                "doctor_name": od.name,
+                                "speciality": speciality,
+                                "date": cur_date.isoformat(),
+                                "start_time": s["start_time"],
+                                "end_time": s["end_time"],
+                            })
+                            if len(alt_specialist_slots) >= max_slots_per_option:
+                                break
+                        if len(alt_specialist_slots) >= max_slots_per_option:
+                            break
+                cur_date += timedelta(days=1)
+
+        return {
+            "requested_doctor_id": requested_doctor_id,
+            "requested_doctor_name": req_doc_name,
+            "speciality": speciality,
+            "is_paediatric": is_paediatric,
+            "same_doctor_next_slots": same_doctor_slots,
+            "same_speciality_alternatives": alt_specialist_slots,
+        }

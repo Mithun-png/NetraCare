@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.config import get_clinic_now
 from app.db.session import get_db
 from app.db.models import Appointment, Doctor, UrgentCase, Patient
 from app.api.deps import get_current_patient, CurrentUser
@@ -24,6 +25,10 @@ class BookAppointmentRequest(BaseModel):
     start_time: str          # HH:MM
     mode: str = "IN_PERSON"  # "IN_PERSON", "VIRTUAL"
     reason: str              # Required per Iteration 2 R3 (up to 300 chars)
+    ocr_intake_text: Optional[str] = None
+
+class AttachOcrRequest(BaseModel):
+    ocr_text: str
 
 class RescheduleAppointmentRequest(BaseModel):
     new_date: str
@@ -47,7 +52,12 @@ class AppointmentDetailResponse(BaseModel):
     end_time: str
     reason: Optional[str]
     doctor_note: Optional[str]
+    intake_notes: Optional[str] = None
+    visit_stage: Optional[str] = "SCHEDULED"
+    dilation_started_at: Optional[str] = None
+    dilation_duration_mins: Optional[int] = 35
     source: Optional[str] = "WEBSITE"
+    server_now: Optional[str] = None
 
 @router.get("/appointments", response_model=List[AppointmentDetailResponse])
 def get_my_appointments(
@@ -62,6 +72,7 @@ def get_my_appointments(
     )
 
     doc_map = {d.id: d.name for d in db.query(Doctor).all()}
+    clinic_now_iso = get_clinic_now().isoformat()
 
     return [
         AppointmentDetailResponse(
@@ -77,7 +88,12 @@ def get_my_appointments(
             end_time=a.end_time.strftime("%H:%M"),
             reason=a.reason,
             doctor_note=a.doctor_note,
+            intake_notes=a.intake_notes,
+            visit_stage=getattr(a, "visit_stage", "SCHEDULED") or "SCHEDULED",
+            dilation_started_at=a.dilation_started_at.isoformat() if getattr(a, "dilation_started_at", None) else None,
+            dilation_duration_mins=getattr(a, "dilation_duration_mins", 35) or 35,
             source=a.source,
+            server_now=clinic_now_iso,
         )
         for a in appts
     ]
@@ -190,10 +206,45 @@ def book_appointment(
             },
         )
 
+    if result.ok and result.appointment and req.ocr_intake_text:
+        now_str = get_clinic_now().strftime("%Y-%m-%d %H:%M")
+        ocr_block = f"[OCR Prescription/Referral Attached — {now_str}]\n{req.ocr_intake_text.strip()}"
+        existing = result.appointment.intake_notes or ""
+        result.appointment.intake_notes = f"{existing}\n\n{ocr_block}".strip()
+        db.commit()
+        db.refresh(result.appointment)
+
     return {
         "ok": True,
         "message": result.message,
         "appointment_id": result.appointment.id if result.appointment else None,
+    }
+
+@router.post("/appointments/{appointment_id}/attach-ocr")
+def attach_ocr_to_appointment(
+    appointment_id: str,
+    req: AttachOcrRequest,
+    patient: CurrentUser = Depends(get_current_patient),
+    db: Session = Depends(get_db),
+):
+    appt = db.query(Appointment).filter(Appointment.id == appointment_id.strip()).first()
+    if not appt:
+        raise HTTPException(status_code=404, detail=f"Appointment '{appointment_id}' not found.")
+    
+    if appt.patient_id != patient.id:
+        raise HTTPException(status_code=403, detail="You do not have permission to attach documents to this appointment.")
+
+    current_notes = appt.intake_notes or ""
+    now_str = get_clinic_now().strftime("%Y-%m-%d %H:%M")
+    ocr_block = f"[OCR Prescription/Referral Attached — {now_str}]\n{req.ocr_text.strip()}"
+    appt.intake_notes = f"{current_notes}\n\n{ocr_block}".strip()
+    db.commit()
+    db.refresh(appt)
+
+    return {
+        "ok": True,
+        "appointment_id": appt.id,
+        "intake_notes": appt.intake_notes,
     }
 
 @router.post("/appointments/{appointment_id}/cancel")
@@ -276,10 +327,45 @@ def reschedule_appointment(
             },
         )
 
+    if result.ok and result.appointment and req.ocr_intake_text:
+        now_str = get_clinic_now().strftime("%Y-%m-%d %H:%M")
+        ocr_block = f"[OCR Prescription/Referral Attached — {now_str}]\n{req.ocr_intake_text.strip()}"
+        existing = result.appointment.intake_notes or ""
+        result.appointment.intake_notes = f"{existing}\n\n{ocr_block}".strip()
+        db.commit()
+        db.refresh(result.appointment)
+
     return {
         "ok": True,
         "message": result.message,
         "appointment_id": result.appointment.id if result.appointment else None,
+    }
+
+@router.post("/appointments/{appointment_id}/attach-ocr")
+def attach_ocr_to_appointment(
+    appointment_id: str,
+    req: AttachOcrRequest,
+    patient: CurrentUser = Depends(get_current_patient),
+    db: Session = Depends(get_db),
+):
+    appt = db.query(Appointment).filter(Appointment.id == appointment_id.strip()).first()
+    if not appt:
+        raise HTTPException(status_code=404, detail=f"Appointment '{appointment_id}' not found.")
+    
+    if appt.patient_id != patient.id:
+        raise HTTPException(status_code=403, detail="You do not have permission to attach documents to this appointment.")
+
+    current_notes = appt.intake_notes or ""
+    now_str = get_clinic_now().strftime("%Y-%m-%d %H:%M")
+    ocr_block = f"[OCR Prescription/Referral Attached — {now_str}]\n{req.ocr_text.strip()}"
+    appt.intake_notes = f"{current_notes}\n\n{ocr_block}".strip()
+    db.commit()
+    db.refresh(appt)
+
+    return {
+        "ok": True,
+        "appointment_id": appt.id,
+        "intake_notes": appt.intake_notes,
     }
 
 @router.get("/profile")

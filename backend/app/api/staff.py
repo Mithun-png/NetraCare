@@ -42,6 +42,10 @@ class DecideApprovalRequest(BaseModel):
     decision: str  # "APPROVED" or "REJECTED"
     reason: Optional[str] = None
 
+class UpdateStageRequest(BaseModel):
+    visit_stage: str  # CHECKED_IN, DILATING, READY_FOR_DOCTOR, COMPLETED
+    dilation_duration_mins: Optional[int] = 35
+
 @router.get("/appointments")
 def get_all_appointments(
     date: Optional[str] = Query(None, description="Date in YYYY-MM-DD format"),
@@ -67,6 +71,7 @@ def get_all_appointments(
     pat_map = {p.id: p.name for p in db.query(Patient).all()}
     doc_map = {d.id: d.name for d in db.query(Doctor).all()}
 
+    clinic_now_iso = get_clinic_now().isoformat()
     return [
         {
             "id": a.id,
@@ -84,9 +89,63 @@ def get_all_appointments(
             "source": a.source,
             "reason": a.reason,
             "doctor_note": a.doctor_note,
+            "intake_notes": getattr(a, "intake_notes", None),
+            "visit_stage": getattr(a, "visit_stage", "SCHEDULED") or "SCHEDULED",
+            "dilation_started_at": a.dilation_started_at.isoformat() if getattr(a, "dilation_started_at", None) else None,
+            "dilation_duration_mins": getattr(a, "dilation_duration_mins", 35) or 35,
+            "server_now": clinic_now_iso,
         }
         for a in appts
     ]
+
+@router.patch("/appointments/{appointment_id}/stage")
+def update_appointment_stage(
+    appointment_id: str,
+    req: UpdateStageRequest,
+    staff: CurrentUser = Depends(get_current_staff),
+    db: Session = Depends(get_db),
+):
+    appt = db.query(Appointment).filter(Appointment.id == appointment_id.strip()).first()
+    if not appt:
+        raise HTTPException(status_code=404, detail=f"Appointment '{appointment_id}' not found.")
+    
+    if appt.status in ["cancelled", "completed"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot change stage of an appointment that is already {appt.status}."
+        )
+
+    allowed_stages = ["SCHEDULED", "CHECKED_IN", "DILATING", "READY_FOR_DOCTOR", "COMPLETED"]
+    new_stage = req.visit_stage.strip().upper()
+    if new_stage not in allowed_stages:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid visit_stage '{new_stage}'. Must be one of {allowed_stages}."
+        )
+
+    appt.visit_stage = new_stage
+    now = get_clinic_now()
+
+    if new_stage == "DILATING":
+        appt.dilation_started_at = now
+        duration = req.dilation_duration_mins if req.dilation_duration_mins is not None else 35
+        if duration < 15 or duration > 60:
+            duration = 35
+        appt.dilation_duration_mins = duration
+    elif new_stage == "COMPLETED":
+        appt.status = "completed"
+
+    db.commit()
+    db.refresh(appt)
+
+    return {
+        "ok": True,
+        "appointment_id": appt.id,
+        "visit_stage": appt.visit_stage,
+        "dilation_started_at": appt.dilation_started_at.isoformat() if appt.dilation_started_at else None,
+        "dilation_duration_mins": appt.dilation_duration_mins,
+        "server_now": now.isoformat(),
+    }
 
 @router.post("/appointments")
 def book_for_patient(

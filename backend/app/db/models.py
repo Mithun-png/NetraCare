@@ -90,6 +90,11 @@ class Appointment(Base):
     rescheduled_from = Column(String(20), nullable=True)
     created_at = Column(DateTime, default=utc_now, nullable=False)
 
+    # Iteration 7: Visit Stage & Dilation Tracking
+    visit_stage = Column(String(30), default="SCHEDULED", nullable=False)  # SCHEDULED, CHECKED_IN, DILATING, READY_FOR_DOCTOR, COMPLETED
+    dilation_started_at = Column(DateTime, nullable=True)
+    dilation_duration_mins = Column(Integer, default=35, nullable=True)
+
     patient = relationship("Patient", back_populates="appointments")
     doctor = relationship("Doctor", back_populates="appointments")
 

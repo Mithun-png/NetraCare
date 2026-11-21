@@ -3,7 +3,8 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import FactOfTheDay from '../components/FactOfTheDay';
 import PatientChat from '../components/PatientChat';
-import { Calendar, Clock, AlertTriangle, CheckCircle, XCircle, RefreshCw, UserCheck } from 'lucide-react';
+import DilationCountdownBadge from '../components/DilationCountdownBadge';
+import { Calendar, Clock, AlertTriangle, CheckCircle, XCircle, RefreshCw, UserCheck, Eye, Paperclip, FileText } from 'lucide-react';
 
 export default function PatientDashboard() {
   const { user } = useAuth();
@@ -24,10 +25,16 @@ export default function PatientDashboard() {
   const [slots, setSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState('');
   const [reason, setReason] = useState('');
+  const [ocrText, setOcrText] = useState('');
+  const [ocrUploading, setOcrUploading] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState(null);
   const [bookingSuccess, setBookingSuccess] = useState(null);
   const [emergencyAlert, setEmergencyAlert] = useState(null);
+
+  const activeVisit = appointments.find((a) =>
+    ['CHECKED_IN', 'DILATING', 'READY_FOR_DOCTOR'].includes(a.visit_stage)
+  );
 
   // Load appointments and doctors
   const refreshAppointments = async () => {
@@ -93,11 +100,13 @@ export default function PatientDashboard() {
         date,
         start_time: selectedSlot,
         reason: reason.trim() || undefined,
+        ocr_intake_text: ocrText.trim() || undefined,
       });
 
       if (res.ok) {
         setBookingSuccess('Appointment booked successfully!');
         setReason('');
+        setOcrText('');
         setSelectedSlot('');
         refreshAppointments();
       }
@@ -138,6 +147,52 @@ export default function PatientDashboard() {
 
       {/* Fact of the Day (Iteration 2 R5) */}
       <FactOfTheDay />
+
+      {/* Live Dilation Drop & Waiting Room Tracker (Iteration 7 Feature D) */}
+      {activeVisit && (
+        <div
+          style={{
+            padding: '22px 26px',
+            borderRadius: '20px',
+            background: activeVisit.visit_stage === 'READY_FOR_DOCTOR' ? '#ecfdf5' : '#fffbeb',
+            border: activeVisit.visit_stage === 'READY_FOR_DOCTOR' ? '2px solid #10b981' : '2px solid #f59e0b',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Eye size={24} color={activeVisit.visit_stage === 'READY_FOR_DOCTOR' ? '#059669' : '#d97706'} />
+              <h3 style={{ fontSize: '1.25rem', margin: 0, color: 'var(--ink, #292524)' }}>
+                Live Visit Status · Dr. {activeVisit.doctor_name}
+              </h3>
+            </div>
+            <DilationCountdownBadge
+              visitStage={activeVisit.visit_stage}
+              dilationStartedAt={activeVisit.dilation_started_at}
+              durationMins={activeVisit.dilation_duration_mins || 35}
+              serverNow={activeVisit.server_now}
+            />
+          </div>
+
+          {activeVisit.visit_stage === 'DILATING' && (
+            <p style={{ fontSize: '1.02rem', color: '#92400e', fontWeight: 600, margin: '6px 0 0', lineHeight: 1.5 }}>
+              Your pupils are dilating. Vision may be temporarily blurred — please avoid driving and remain seated in the waiting lounge.
+            </p>
+          )}
+
+          {activeVisit.visit_stage === 'READY_FOR_DOCTOR' && (
+            <p style={{ fontSize: '1.1rem', color: '#065f46', fontWeight: 700, margin: '6px 0 0', lineHeight: 1.5 }}>
+              Dilation complete. You are ready for examination. Please proceed to Dr. {activeVisit.doctor_name}'s room.
+            </p>
+          )}
+
+          {activeVisit.visit_stage === 'CHECKED_IN' && (
+            <p style={{ fontSize: '0.95rem', color: '#475569', margin: '6px 0 0' }}>
+              You are checked in. Staff will administer dilation drops shortly.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Patient Knowledge Base Chat (Iteration 3 R3) */}
       <PatientChat />
@@ -290,6 +345,55 @@ export default function PatientDashboard() {
                 maxLength={300}
                 required
               />
+            </div>
+
+            {/* Optional Prescription / Referral OCR (Iteration 7 Feature C) */}
+            <div className="form-group" style={{ background: 'var(--bg)', padding: '12px', borderRadius: '12px', border: '1px dashed var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label className="form-label" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}>
+                  <Paperclip size={14} /> Attach Prescription / Referral (Optional)
+                </label>
+                {ocrUploading && <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>Transcribing...</span>}
+              </div>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  setOcrUploading(true);
+                  try {
+                    const fd = new FormData();
+                    fd.append('file', f);
+                    const res = await api.uploadOcrPrescription(fd);
+                    setOcrText(res.formatted_summary || res.raw_text || '');
+                  } catch (err) {
+                    alert(err.message || 'OCR processing failed.');
+                  } finally {
+                    setOcrUploading(false);
+                  }
+                }}
+                style={{ fontSize: '0.82rem', width: '100%' }}
+              />
+              {ocrText && (
+                <div style={{ marginTop: '8px' }}>
+                  <textarea
+                    rows="3"
+                    className="form-control"
+                    style={{ fontSize: '0.78rem', fontFamily: 'monospace' }}
+                    value={ocrText}
+                    onChange={(e) => setOcrText(e.target.value)}
+                    placeholder="Transcribed optical notes..."
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setOcrText('')}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--danger)', fontSize: '0.75rem', cursor: 'pointer', marginTop: '4px' }}
+                  >
+                    Remove attached document
+                  </button>
+                </div>
+              )}
             </div>
 
             <button

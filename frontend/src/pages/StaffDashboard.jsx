@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import SearchDebugger from '../components/SearchDebugger';
-import { AlertTriangle, Check, X, ShieldAlert, Plus, Search, Filter, RefreshCw } from 'lucide-react';
+import DilationCountdownBadge from '../components/DilationCountdownBadge';
+import { AlertTriangle, Check, X, ShieldAlert, Plus, Search, Filter, RefreshCw, Eye } from 'lucide-react';
 
 export default function StaffDashboard() {
   const { user } = useAuth();
@@ -106,6 +107,15 @@ export default function StaffDashboard() {
       refreshAll();
     } catch (e) {
       alert(e.message || 'Failed to cancel.');
+    }
+  };
+
+  const handleUpdateStage = async (id, stage, duration = 35) => {
+    try {
+      await api.updateAppointmentStage(id, { visit_stage: stage, dilation_duration_mins: duration });
+      refreshAll();
+    } catch (e) {
+      alert(e.message || 'Failed to update visit stage.');
     }
   };
 
@@ -409,7 +419,7 @@ export default function StaffDashboard() {
                   <th style={{ padding: '10px' }}>Doctor</th>
                   <th style={{ padding: '10px' }}>Speciality</th>
                   <th style={{ padding: '10px' }}>Status</th>
-                  <th style={{ padding: '10px' }}>Source</th>
+                  <th style={{ padding: '10px' }}>Visit Stage & Dilation</th>
                   <th style={{ padding: '10px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -424,7 +434,50 @@ export default function StaffDashboard() {
                     <td style={{ padding: '10px' }}>
                       <span className={`badge badge-${a.status}`}>{a.status}</span>
                     </td>
-                    <td style={{ padding: '10px', fontSize: '0.8rem', color: 'var(--muted)' }}>Booked via {a.source}</td>
+                    <td style={{ padding: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <DilationCountdownBadge
+                          visitStage={a.visit_stage || 'SCHEDULED'}
+                          dilationStartedAt={a.dilation_started_at}
+                          durationMins={a.dilation_duration_mins || 35}
+                          serverNow={a.server_now}
+                        />
+                        {a.status === 'booked' && (
+                          <>
+                            {(!a.visit_stage || a.visit_stage === 'SCHEDULED') && (
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                style={{ padding: '2px 8px', fontSize: '0.75rem' }}
+                                onClick={() => handleUpdateStage(a.id, 'CHECKED_IN')}
+                              >
+                                Check In
+                              </button>
+                            )}
+                            {a.visit_stage === 'CHECKED_IN' && (
+                              <button
+                                type="button"
+                                className="btn btn-primary"
+                                style={{ padding: '2px 8px', fontSize: '0.75rem', background: '#f59e0b', borderColor: '#f59e0b', color: '#ffffff' }}
+                                onClick={() => handleUpdateStage(a.id, 'DILATING', 35)}
+                              >
+                                Start Dilation (35m)
+                              </button>
+                            )}
+                            {a.visit_stage === 'DILATING' && (
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                style={{ padding: '2px 8px', fontSize: '0.75rem' }}
+                                onClick={() => handleUpdateStage(a.id, 'READY_FOR_DOCTOR')}
+                              >
+                                Mark Ready
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </td>
                     <td style={{ padding: '10px', textAlign: 'right' }}>
                       {a.status === 'booked' && (
                         <button
