@@ -65,8 +65,8 @@ export default function Login({ onLoginSuccess }) {
   return (
     <div className="container" style={{ maxWidth: '560px', marginTop: '16px' }}>
       <div className="card" style={{ padding: '36px 32px', textAlign: 'center' }}>
-        <div style={{ display: 'inline-flex', marginBottom: '16px' }}>
-          <NetraCareLogo size={48} />
+        <div style={{ display: 'inline-flex', justifyContent: 'center', marginBottom: '16px' }}>
+          <NetraCareLogo variant="full" height={52} />
         </div>
         <h2 style={{ fontSize: '1.8rem', textAlign: 'center', marginBottom: '8px' }}>Sign In to NetraCare</h2>
         <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.95rem', marginBottom: '24px' }}>

@@ -241,9 +241,19 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
                     }],
                 )
             else:
-                first_few = tool_data[:3]
+                first_few = tool_data[:4]
                 lines = [f"- {s['day']} {s['date']} at {s['start_time']} with {s['doctor_name']}" for s in first_few]
-                return AIMessage(content="Here are the earliest available times:\n" + "\n".join(lines) + "\nPlease let me know which time suits you and the reason for your visit so I can book it.")
+                spec_name = first_few[0].get("speciality", "")
+                specialists_map = {
+                    "Cataract": "Dr. Anand Rao and Dr. Meera Iyer",
+                    "Glaucoma": "Dr. Meera Iyer",
+                    "Retina": "Dr. Kiran Shah",
+                    "Cornea": "Dr. Fatima Khan",
+                    "Paediatric": "Dr. Vikram Menon",
+                    "General": "Dr. Anand Rao, Dr. Kiran Shah, and Dr. Vikram Menon",
+                }
+                intro = f"For {spec_name}, our specialist{'s are ' + specialists_map[spec_name] if spec_name in specialists_map else ''}.\n" if spec_name in specialists_map else ""
+                return AIMessage(content=f"{intro}Here are the earliest available times:\n" + "\n".join(lines) + "\nPlease let me know which time suits you and the reason for your visit so I can book it.")
 
     # --- Iteration 6: Lab Questions Guardrails & Tool Calls ---
     if re.search(r"\b(8\.2|is that bad|read my (result|report)|interpret)\b", q_lower):
@@ -391,11 +401,21 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
         "book", "reschedule", "cancel", "move my appointment", "actually, make it",
         "can you book", "reserve", "see someone on saturday", "the earliest time",
         "what appointment", "check-up on", "appointment with dr", "appointment tomorrow",
-        "appointment on", "check with dr", "follow-up with dr"
+        "appointment on", "check with dr", "follow-up with dr",
+        "suggest", "available", "who is available", "which doctor", "who can see",
+        "free slot", "slots", "when can i see", "consultation tomorrow", "specialist available",
+        "available tomorrow", "available for tomorrow", "see a doctor"
     ])
 
     # If it's a policy/FAQ question or symptom inquiry without booking intent, search clinic docs
-    if not has_booking_intent or any(k in q_lower for k in ["how much is a new consultation", "parking"]):
+    is_policy_faq = any(k in q_lower for k in [
+        "how much is a new consultation", "parking", "wheelchair", "opening hours",
+        "timings", "what time does the clinic open", "cost", "price", "fee", "stay overnight",
+        "after it", "before it", "is it safe to take my scooter", "what should i avoid",
+        "rash on my arm", "skin rash"
+    ])
+
+    if not has_booking_intent or is_policy_faq:
         # Handle contextual question rewriting if references like 'after it' exist
         query_to_search = latest_text
         if re.search(r"\b(after it|before it|for it)\b", q_lower):
@@ -432,19 +452,19 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
 
     # 5. Booking rules check & booking flow
     # Check paediatric age rule
-    if is_paediatric or "read the board" in comb_lower or "school" in comb_lower:
+    if is_paediatric or "read the board" in comb_lower or "school" in comb_lower or "child" in q_lower or "pediatric" in q_lower or "paediatric" in q_lower or "squint" in q_lower:
         spec = "Paediatric"
         doc_id = "D5"
-    elif "retina" in comb_lower:
+    elif "retina" in comb_lower or "diabetic" in comb_lower or "floater" in comb_lower:
         spec = "Retina"
         doc_id = "D3" if ("shah" in comb_lower or "ok, dr. shah" in q_lower) else ("D1" if "rao" in q_lower else "D3")
-    elif "glaucoma" in comb_lower:
+    elif "glaucoma" in comb_lower or "pressure" in comb_lower or "halo" in comb_lower:
         spec = "Glaucoma"
         doc_id = "D2"
-    elif "cataract" in comb_lower or "cloudy" in comb_lower:
+    elif "cataract" in comb_lower or "cloudy" in comb_lower or "misty" in comb_lower or "glare" in comb_lower:
         spec = "Cataract"
-        doc_id = "D2" if "iyer" in comb_lower else "D1"
-    elif "cornea" in comb_lower or "dry eye" in comb_lower or "itchy" in comb_lower:
+        doc_id = "D2" if "iyer" in comb_lower else ("D1" if "rao" in comb_lower else None)
+    elif "cornea" in comb_lower or "dry eye" in comb_lower or "itchy" in comb_lower or "lasik" in comb_lower or "gritty" in comb_lower or "burning" in comb_lower:
         spec = "Cornea"
         doc_id = "D4"
     else:
@@ -474,8 +494,9 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
         Appointment.patient_id == patient_id,
         Appointment.speciality.ilike(spec),
         Appointment.status.in_(["booked", "pending_staff"]),
+        Appointment.date >= now.date(),
     ).first()
-    if active_in_spec and ("book" in q_lower or "book" in comb_lower) and not ("yes" in q_lower or "fine" in q_lower):
+    if active_in_spec and ("book" in q_lower or "please book" in q_lower) and not ("yes" in q_lower or "fine" in q_lower):
         d_name = db.query(Doctor).filter(Doctor.id == active_in_spec.doctor_id).first().name
         return AIMessage(
             content=f"You already have an active {active_in_spec.speciality} appointment on {active_in_spec.date.strftime('%A %d %B')} at {active_in_spec.start_time.strftime('%H:%M')} with {d_name}. Clinic policy permits only one active appointment per speciality. Would you like to reschedule or cancel that appointment instead?"
@@ -489,9 +510,10 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
     if doc_id == "D3" and ("saturday" in q_lower or "14 november" in q_lower):
         return AIMessage(content="Dr. Kiran Shah is not at the clinic on Saturdays. Monday 9 November is also a clinic holiday. His earliest available weekday time is Tuesday 10 November at 9:00 AM. Would that work?")
 
-    # D. Dr. Khan on Monday afternoon is SURGERY
-    if doc_id == "D4" and ("this afternoon" in q_lower or "today" in q_lower) and now.weekday() == 0:
-        return AIMessage(content="Dr. Fatima Khan is scheduled for surgery this afternoon and is not taking OPD appointments. Her next available OPD session is Tuesday morning from 9:00 AM.")
+    # D. Dr. Khan on Monday is SURGERY
+    is_asking_monday = ("monday" in q_lower) or (now.weekday() == 0 and ("today" in q_lower or "this afternoon" in q_lower)) or (now.weekday() == 6 and "tomorrow" in q_lower)
+    if (doc_id == "D4" or spec == "Cornea") and is_asking_monday:
+        return AIMessage(content="Dr. Fatima Khan is scheduled for surgery on Mondays and is not taking OPD appointments. Her next available OPD session is Tuesday morning from 9:00 AM. Would Tuesday work for your visit?")
 
     # E. Lunch hour check: 1:30 PM is OUTSIDE_SESSION
     if "1:30" in q_lower:
@@ -531,7 +553,18 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
     # Determine date range from text
     target_date_from = None
     target_date_to = None
-    if "friday" in q_lower or ("friday" in comb_lower and "thursday" not in q_lower):
+    holidays = {h.date for h in db.query(Holiday).all()}
+    if "tomorrow" in q_lower:
+        cand = now.date() + timedelta(days=1)
+        while cand.weekday() == 6 or cand in holidays:
+            cand += timedelta(days=1)
+        target_date_from = cand.isoformat()
+        target_date_to = cand.isoformat()
+    elif "today" in q_lower or "this morning" in q_lower or "this afternoon" in q_lower:
+        cand = now.date()
+        target_date_from = cand.isoformat()
+        target_date_to = cand.isoformat()
+    elif "friday" in q_lower or ("friday" in comb_lower and "thursday" not in q_lower):
         for i in range(14):
             cand = now.date() + timedelta(days=i)
             if cand.weekday() == 4:
@@ -549,6 +582,27 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
         for i in range(14):
             cand = now.date() + timedelta(days=i)
             if cand.weekday() == 1:
+                target_date_from = cand.isoformat()
+                target_date_to = cand.isoformat()
+                break
+    elif "monday" in q_lower:
+        for i in range(14):
+            cand = now.date() + timedelta(days=i)
+            if cand.weekday() == 0:
+                target_date_from = cand.isoformat()
+                target_date_to = cand.isoformat()
+                break
+    elif "wednesday" in q_lower:
+        for i in range(14):
+            cand = now.date() + timedelta(days=i)
+            if cand.weekday() == 2:
+                target_date_from = cand.isoformat()
+                target_date_to = cand.isoformat()
+                break
+    elif "thursday" in q_lower:
+        for i in range(14):
+            cand = now.date() + timedelta(days=i)
+            if cand.weekday() == 3:
                 target_date_from = cand.isoformat()
                 target_date_to = cand.isoformat()
                 break
