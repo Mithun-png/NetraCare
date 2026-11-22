@@ -35,6 +35,7 @@ class RescheduleAppointmentRequest(BaseModel):
     new_start_time: str
     new_doctor_id: Optional[str] = None
     new_speciality: Optional[str] = None
+    ocr_intake_text: Optional[str] = None
 
 class CancelAppointmentRequest(BaseModel):
     reason: Optional[str] = None
