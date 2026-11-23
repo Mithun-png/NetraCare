@@ -133,8 +133,20 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
         ]
     )
 
-    # Search for reason across all user messages
+    # Search for reason across conversation turns
     reason_val = None
+    for i in range(len(messages) - 1):
+        msg = messages[i]
+        next_msg = messages[i + 1]
+        if isinstance(msg, AIMessage) and any(phrase in msg.content.lower() for phrase in [
+            "provide the reason for your visit",
+            "reason for your visit so i can book it",
+            "what is the reason for your visit",
+            "could you please provide the reason",
+        ]) and isinstance(next_msg, HumanMessage):
+            reason_val = next_msg.content.strip()
+
+    # Also search explicit regex across all user messages
     for m in reversed(user_msgs):
         text_content = m.content if isinstance(m.content, str) else str(m.content)
         match = re.search(r"reason:\s*([^|]+)", text_content, re.IGNORECASE)
@@ -504,17 +516,28 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
         spec = "General"
         doc_id = None
 
-    # Check for doctor override in latest turn
-    if "shah" in q_lower:
-        doc_id = "D3"
-    elif "iyer" in q_lower:
-        doc_id = "D2"
-    elif "rao" in q_lower:
-        doc_id = "D1"
-    elif "khan" in q_lower:
+    # Check for doctor in current turn or conversation history
+    active_doc_text = q_lower if any(d in q_lower for d in ["shah", "iyer", "rao", "khan", "fatima", "menon"]) else comb_lower
+    if "khan" in active_doc_text or "fatima" in active_doc_text:
         doc_id = "D4"
-    elif "menon" in q_lower:
+        if spec == "General":
+            spec = "Cornea"
+    elif "shah" in active_doc_text:
+        doc_id = "D3"
+        if spec == "General":
+            spec = "Retina"
+    elif "iyer" in active_doc_text:
+        doc_id = "D2"
+        if spec == "General":
+            spec = "Glaucoma"
+    elif "menon" in active_doc_text:
         doc_id = "D5"
+        if spec == "General":
+            spec = "Paediatric"
+    elif "rao" in active_doc_text:
+        doc_id = "D1"
+        if spec == "General":
+            spec = "Cataract"
 
     # 0. Check for non-eye problems (R30)
     non_eye_keywords = ["back hurt", "back pain", "stomach", "tooth", "knee pain", "chest pain"]
@@ -546,7 +569,13 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
     # D. Dr. Khan on Monday is SURGERY
     is_asking_monday = ("monday" in q_lower) or (now.weekday() == 0 and ("today" in q_lower or "this afternoon" in q_lower)) or (now.weekday() == 6 and "tomorrow" in q_lower)
     if (doc_id == "D4" or spec == "Cornea") and is_asking_monday:
-        return AIMessage(content="Dr. Fatima Khan is scheduled for surgery on Mondays and is not taking OPD appointments. Her next available OPD session is Tuesday morning from 9:00 AM. Would Tuesday work for your visit?")
+        # Find next available OPD day for Dr. Khan (OPD is Tue-Sat, excluding holidays)
+        cand_next = now.date() + timedelta(days=1)
+        holidays_set = {h.date for h in db.query(Holiday).all()}
+        while cand_next.weekday() in [0, 6] or cand_next in holidays_set:
+            cand_next += timedelta(days=1)
+        next_day_str = cand_next.strftime("%A")
+        return AIMessage(content=f"Dr. Fatima Khan is scheduled for surgery on Mondays and is not taking OPD appointments. Her next available OPD session is {next_day_str} morning from 9:00 AM. Would {next_day_str} work for your visit?")
 
     # E. Lunch hour check: 1:30 PM is OUTSIDE_SESSION
     if "1:30" in q_lower:
@@ -565,7 +594,18 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
         return AIMessage(content="9 November is a clinic holiday. Dr. Fatima Khan's earliest available time is Tuesday 10 November at 9:00 AM. Would that work?")
 
     # I. Follow-up requires previous visit check
-    if "new consultation" in q_lower:
+    agreed_new_consult = False
+    if "new consultation" in comb_lower or "as a new" in comb_lower or "as new" in comb_lower:
+        agreed_new_consult = True
+
+    for i in range(len(messages) - 1):
+        msg = messages[i]
+        next_msg = messages[i + 1]
+        if isinstance(msg, AIMessage) and "book it as a new consultation" in msg.content.lower():
+            if isinstance(next_msg, HumanMessage) and any(w in next_msg.content.lower() for w in ["yes", "sure", "ok", "fine", "new"]):
+                agreed_new_consult = True
+
+    if agreed_new_consult:
         is_follow_up = False
     else:
         is_follow_up = ("follow-up" in comb_lower or "follow up" in comb_lower)
@@ -583,56 +623,57 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
     if ("book" in q_lower or "book" in comb_lower) and not has_reason and len(latest_text.split()) < 10:
         return AIMessage(content="To book your appointment, could you please provide the reason for your visit?")
 
-    # Determine date range from text
+    # Determine date range from text (prefer current message, fall back to conversation history)
+    active_date_text = q_lower if any(d in q_lower for d in ["today", "tomorrow", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]) else comb_lower
     target_date_from = None
     target_date_to = None
     holidays = {h.date for h in db.query(Holiday).all()}
-    if "tomorrow" in q_lower:
+    if "tomorrow" in active_date_text:
         cand = now.date() + timedelta(days=1)
         while cand.weekday() == 6 or cand in holidays:
             cand += timedelta(days=1)
         target_date_from = cand.isoformat()
         target_date_to = cand.isoformat()
-    elif "today" in q_lower or "this morning" in q_lower or "this afternoon" in q_lower:
+    elif "today" in active_date_text or "this morning" in active_date_text or "this afternoon" in active_date_text:
         cand = now.date()
         target_date_from = cand.isoformat()
         target_date_to = cand.isoformat()
-    elif "friday" in q_lower or ("friday" in comb_lower and "thursday" not in q_lower):
+    elif "friday" in active_date_text or ("friday" in comb_lower and "thursday" not in active_date_text):
         for i in range(14):
             cand = now.date() + timedelta(days=i)
             if cand.weekday() == 4:
                 target_date_from = cand.isoformat()
                 target_date_to = cand.isoformat()
                 break
-    elif "saturday" in q_lower or "7 november" in q_lower:
+    elif "saturday" in active_date_text or "7 november" in active_date_text:
         for i in range(14):
             cand = now.date() + timedelta(days=i)
             if cand.weekday() == 5:
                 target_date_from = cand.isoformat()
                 target_date_to = cand.isoformat()
                 break
-    elif "tuesday" in q_lower or "10 november" in q_lower:
+    elif "tuesday" in active_date_text or "10 november" in active_date_text:
         for i in range(14):
             cand = now.date() + timedelta(days=i)
             if cand.weekday() == 1:
                 target_date_from = cand.isoformat()
                 target_date_to = cand.isoformat()
                 break
-    elif "monday" in q_lower:
+    elif "monday" in active_date_text:
         for i in range(14):
             cand = now.date() + timedelta(days=i)
             if cand.weekday() == 0:
                 target_date_from = cand.isoformat()
                 target_date_to = cand.isoformat()
                 break
-    elif "wednesday" in q_lower:
+    elif "wednesday" in active_date_text:
         for i in range(14):
             cand = now.date() + timedelta(days=i)
             if cand.weekday() == 2:
                 target_date_from = cand.isoformat()
                 target_date_to = cand.isoformat()
                 break
-    elif "thursday" in q_lower:
+    elif "thursday" in active_date_text:
         for i in range(14):
             cand = now.date() + timedelta(days=i)
             if cand.weekday() == 3:
@@ -640,8 +681,24 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
                 target_date_to = cand.isoformat()
                 break
 
+    # Check if target date is a holiday
+    cand_date = dt_date.fromisoformat(target_date_from) if target_date_from else None
+    if cand_date and cand_date in holidays:
+        h_obj = db.query(Holiday).filter(Holiday.date == cand_date).first()
+        h_name = h_obj.name if h_obj else "Clinic holiday"
+        next_cand = cand_date + timedelta(days=1)
+        while next_cand.weekday() == 6 or next_cand in holidays:
+            next_cand += timedelta(days=1)
+        next_day_name = next_cand.strftime("%A %d %B")
+        d_name_str = "the specialist"
+        if doc_id:
+            d_obj = db.query(Doctor).filter(Doctor.id == doc_id).first()
+            if d_obj:
+                d_name_str = d_obj.name
+        return AIMessage(content=f"{cand_date.strftime('%A %d %B')} is a clinic holiday ({h_name}). {d_name_str}'s earliest available time is {next_day_name} at 9:00 AM. Would {next_cand.strftime('%A')} work for your visit?")
+
     # Default find_slots call
-    target_session = "PM" if ("afternoon" in comb_lower or "pm" in comb_lower) else ("AM" if "morning" in comb_lower else None)
+    target_session = "PM" if ("afternoon" in comb_lower or "pm" in comb_lower or "14:00" in comb_lower) else ("AM" if "morning" in comb_lower else None)
     return AIMessage(
         content="",
         tool_calls=[{
