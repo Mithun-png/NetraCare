@@ -79,8 +79,16 @@ export default function StaffDashboard() {
   };
 
   const handleMarkSeen = async (id) => {
-    await api.markUrgentSeen(id);
-    refreshAll();
+    try {
+      // Optimistic instant UI update
+      setUrgentCases((prev) => prev.filter((c) => c.id !== id));
+      setStats((prev) => (prev ? { ...prev, urgent_cases_count: Math.max(0, prev.urgent_cases_count - 1) } : prev));
+      await api.markUrgentSeen(id);
+      refreshAll();
+    } catch (e) {
+      alert(e.message || 'Failed to mark case as handled.');
+      refreshAll();
+    }
   };
 
   const handleDecideApproval = async (id, decision) => {
@@ -162,20 +170,20 @@ export default function StaffDashboard() {
 
       {/* Daily Clinic Overview KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-        {/* Total Cases Today */}
+        {/* Patients Booked Today */}
         <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px', borderLeft: '4px solid var(--accent, #FFB7B2)' }}>
           <div style={{ background: 'rgba(255, 183, 178, 0.25)', padding: '12px', borderRadius: '12px', display: 'flex' }}>
             <Calendar size={22} color="var(--accent-dark, #e06d64)" />
           </div>
           <div>
             <div style={{ fontSize: '0.8rem', color: 'var(--muted, #78716c)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Total Cases Today
+              Patients Booked Today
             </div>
             <div style={{ fontSize: '1.65rem', fontWeight: 700, color: 'var(--ink, #292524)', lineHeight: 1.2 }}>
               {stats ? stats.total_cases_today : appointments.filter(a => a.date === filterDate && a.status !== 'cancelled').length}
             </div>
             <div style={{ fontSize: '0.78rem', color: 'var(--muted, #78716c)', marginTop: '2px' }}>
-              Non-cancelled visits on record
+              Appointments scheduled today
             </div>
           </div>
         </div>
@@ -187,28 +195,28 @@ export default function StaffDashboard() {
           </div>
           <div>
             <div style={{ fontSize: '0.8rem', color: 'var(--muted, #78716c)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Urgent Cases
+              Urgent Safety Cases
             </div>
             <div style={{ fontSize: '1.65rem', fontWeight: 700, color: urgentCases.length > 0 ? 'var(--danger, #ef4444)' : 'var(--ink, #292524)', lineHeight: 1.2 }}>
               {urgentCases.length}
             </div>
             <div style={{ fontSize: '0.78rem', color: urgentCases.length > 0 ? 'var(--danger, #ef4444)' : 'var(--muted, #78716c)', marginTop: '2px', fontWeight: urgentCases.length > 0 ? 600 : 400 }}>
-              {urgentCases.length > 0 ? 'Requires immediate attention' : 'All clear · Zero active red flags'}
+              {urgentCases.length > 0 ? 'Requires immediate action' : 'All clear · Zero active red flags'}
             </div>
           </div>
         </div>
 
-        {/* Doctors Available Today */}
+        {/* Active Doctors Today */}
         <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px', borderLeft: '4px solid #3b82f6' }}>
           <div style={{ background: 'rgba(59, 130, 246, 0.12)', padding: '12px', borderRadius: '12px', display: 'flex' }}>
             <UserCheck size={22} color="#3b82f6" />
           </div>
           <div>
             <div style={{ fontSize: '0.8rem', color: 'var(--muted, #78716c)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Doctors On OPD Today
+              Active Doctors Today
             </div>
             <div style={{ fontSize: '1.65rem', fontWeight: 700, color: 'var(--ink, #292524)', lineHeight: 1.2 }}>
-              {stats ? `${stats.doctors_available_today_count} of 5` : '4 of 5'}
+              {stats ? `${stats.doctors_available_today_count} of 5` : '4 of 5 Active'}
             </div>
             <div style={{ fontSize: '0.78rem', color: 'var(--muted, #78716c)', marginTop: '2px' }} title={stats?.doctors_available_today?.map(d => d.name).join(', ')}>
               {stats?.holiday_today ? `Closed: ${stats.holiday_today}` : 'Dr. Khan in surgery on Mondays'}
