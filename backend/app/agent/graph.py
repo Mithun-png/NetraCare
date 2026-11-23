@@ -133,6 +133,18 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
         ]
     )
 
+    is_answering_proposal = any(
+        phrase in last_ai_content
+        for phrase in [
+            "work for your visit",
+            "would that work",
+            "would you like to book",
+            "earliest available time is",
+            "available times:",
+            "clinic holiday",
+        ]
+    ) and any(w in q_lower for w in ["yes", "works", "sure", "ok", "fine", "wednesday", "thursday", "friday", "saturday", "tuesday", "monday", "book"])
+
     # Search for reason across conversation turns
     reason_val = None
     for i in range(len(messages) - 1):
@@ -412,7 +424,7 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
             )
 
     # 3. Cancel appointment
-    if re.search(r"\b(cancel my appointment|cancel appointment|cancel)\b", q_lower):
+    if re.search(r"\b(cancel my appointment|cancel appointment|cancel my booking|cancel)\b", q_lower):
         # Check if an explicit appointment ID was given
         match_id = re.search(r"\b(A\d{3,4})\b", latest_text)
         if match_id:
@@ -426,12 +438,24 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
                 }],
             )
         else:
-            appts = db.query(Appointment).filter(
+            q = db.query(Appointment).filter(
                 Appointment.patient_id == patient_id,
                 Appointment.status.in_(["booked", "pending_staff"]),
-            ).order_by(Appointment.date.asc()).all()
+            )
+            if "iyer" in q_lower or "meera" in q_lower:
+                q = q.filter(Appointment.doctor_id == "D2")
+            elif "rao" in q_lower or "anand" in q_lower:
+                q = q.filter(Appointment.doctor_id == "D1")
+            elif "shah" in q_lower or "kiran" in q_lower:
+                q = q.filter(Appointment.doctor_id == "D3")
+            elif "khan" in q_lower or "fatima" in q_lower or "fatimah" in q_lower:
+                q = q.filter(Appointment.doctor_id == "D4")
+            elif "menon" in q_lower or "vikram" in q_lower:
+                q = q.filter(Appointment.doctor_id == "D5")
+
+            appts = q.order_by(Appointment.date.asc()).all()
             if not appts:
-                return AIMessage(content="You do not have any active appointments to cancel.")
+                return AIMessage(content="You do not have any active appointments matching that request to cancel.")
             return AIMessage(
                 content="",
                 tool_calls=[{
@@ -442,14 +466,14 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
             )
 
     # 4. General Q&A / Clinic Docs Queries
-    has_booking_intent = is_answering_reason or any(k in q_lower for k in [
+    has_booking_intent = is_answering_reason or is_answering_proposal or any(k in q_lower for k in [
         "book", "reschedule", "cancel", "move my appointment", "actually, make it",
         "can you book", "reserve", "see someone on saturday", "the earliest time",
         "what appointment", "check-up on", "appointment with dr", "appointment tomorrow",
         "appointment on", "check with dr", "follow-up with dr",
         "suggest", "available", "who is available", "which doctor", "who can see",
         "free slot", "slots", "when can i see", "consultation tomorrow", "specialist available",
-        "available tomorrow", "available for tomorrow", "see a doctor"
+        "available tomorrow", "available for tomorrow", "see a doctor", "works"
     ])
 
     # If it's a policy/FAQ question or symptom inquiry without booking intent, search clinic docs

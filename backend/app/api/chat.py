@@ -79,12 +79,22 @@ def patient_chat_endpoint(
                     elif h.get("role") == "assistant":
                         history_msgs.append(AIMessage(content=h.get("content", "")))
 
-            # If an action was waiting on this thread and the user typed a new message,
-            # resume with False (cancel action per R5) then process the new message
+            # If an action was waiting on this thread:
+            handled_interrupt = False
             if curr_state.tasks and any(t.interrupts for t in curr_state.tasks):
-                list(agent_graph.stream(Command(resume=False), config))
+                clean_msg = msg_text.lower().strip()
+                if clean_msg in ("yes", "confirm", "sure", "ok", "proceed", "y", "yes please", "do it"):
+                    list(agent_graph.stream(Command(resume=True), config))
+                    handled_interrupt = True
+                elif clean_msg in ("no", "cancel", "decline", "stop", "n", "no cancel", "don't"):
+                    list(agent_graph.stream(Command(resume=False), config))
+                    handled_interrupt = True
+                else:
+                    # User changed topic or asked another question
+                    list(agent_graph.stream(Command(resume=False), config))
 
-            list(agent_graph.stream({"messages": history_msgs + [HumanMessage(content=msg_text)]}, config))
+            if not handled_interrupt:
+                list(agent_graph.stream({"messages": history_msgs + [HumanMessage(content=msg_text)]}, config))
         else:
             raise HTTPException(status_code=400, detail="Either 'message', 'confirm', or 'selected_option' must be provided.")
 
@@ -104,13 +114,21 @@ def patient_chat_endpoint(
             ai_msgs = [m for m in msgs if isinstance(m, AIMessage) and m.content]
             answer = ai_msgs[-1].content if ai_msgs else "How can I assist you with NetraCare appointments?"
 
-        # Extract sources from search_clinic_docs, get_lab_test_info, and skills
+        # Extract sources and tool artifacts for the current turn only
         sources = []
         skills_loaded = []
         lab_used = False
         lab_offline = False
 
-        for m in msgs:
+        # Isolate messages from the current user turn
+        last_human_idx = -1
+        for idx, m in enumerate(msgs):
+            if isinstance(m, HumanMessage):
+                last_human_idx = idx
+
+        turn_msgs = msgs[last_human_idx + 1:] if last_human_idx >= 0 else msgs
+
+        for m in turn_msgs:
             if isinstance(m, ToolMessage):
                 if m.name == "search_clinic_docs":
                     try:

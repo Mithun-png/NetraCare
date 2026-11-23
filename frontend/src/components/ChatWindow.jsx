@@ -103,68 +103,82 @@ export default function ChatWindow({ mode = 'full', onExpand }) {
         overflow: 'hidden',
       }}
     >
-      {/* Header for Widget Mode */}
-      {isWidget && (
-        <div
-          style={{
-            padding: '14px 18px',
-            borderBottom: '1px solid var(--border, rgba(0,0,0,0.06))',
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(253, 252, 248, 0.9))',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div
-              style={{
-                width: '10px',
-                height: '10px',
-                borderRadius: '50%',
-                background: '#10b981',
-                boxShadow: '0 0 8px rgba(16, 185, 129, 0.5)',
-              }}
-            />
-            <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--ink, #292524)' }}>
+      {/* Header for Full & Widget Mode */}
+      <div
+        style={{
+          padding: isWidget ? '14px 18px' : '16px 24px',
+          borderBottom: '1px solid var(--border, rgba(0,0,0,0.06))',
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(253, 252, 248, 0.9))',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div
+            style={{
+              width: '10px',
+              height: '10px',
+              borderRadius: '50%',
+              background: '#10b981',
+              boxShadow: '0 0 8px rgba(16, 185, 129, 0.5)',
+            }}
+          />
+          <div>
+            <span style={{ fontWeight: 600, fontSize: isWidget ? '0.95rem' : '1.05rem', color: 'var(--ink, #292524)' }}>
               NetraCare Front Desk
             </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {onExpand && (
-              <button
-                type="button"
-                onClick={onExpand}
-                title="Expand to Full View"
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: 'var(--muted, #78716c)',
-                  padding: '4px',
-                  display: 'flex',
-                }}
-              >
-                <Maximize2 size={16} />
-              </button>
+            {!isWidget && (
+              <span style={{ fontSize: '0.8rem', color: 'var(--muted, #78716c)', marginLeft: '10px' }}>
+                Online · 5 Specialists · Live Care Coordination
+              </span>
             )}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {isWidget && onExpand && (
             <button
               type="button"
-              onClick={resetChat}
-              title="Reset conversation"
+              onClick={onExpand}
+              title="Expand to Full View"
               style={{
                 background: 'transparent',
                 border: 'none',
                 cursor: 'pointer',
                 color: 'var(--muted, #78716c)',
-                padding: '4px',
+                padding: '6px',
                 display: 'flex',
               }}
             >
-              <RotateCcw size={15} />
+              <Maximize2 size={16} />
             </button>
-          </div>
+          )}
+          <button
+            type="button"
+            onClick={resetChat}
+            title="Reset conversation and start fresh"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'rgba(0,0,0,0.04)',
+              border: '1px solid var(--border, rgba(0,0,0,0.08))',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              color: 'var(--ink, #292524)',
+              padding: isWidget ? '5px 10px' : '7px 14px',
+              fontSize: '0.82rem',
+              fontWeight: 500,
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(0,0,0,0.08)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(0,0,0,0.04)')}
+          >
+            <RotateCcw size={14} />
+            <span>Reset Chat</span>
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Messages Scroll Area */}
       <div
