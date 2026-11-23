@@ -3,7 +3,7 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import SearchDebugger from '../components/SearchDebugger';
 import DilationCountdownBadge from '../components/DilationCountdownBadge';
-import { AlertTriangle, Check, X, ShieldAlert, Plus, Search, Filter, RefreshCw, Eye } from 'lucide-react';
+import { AlertTriangle, Check, X, ShieldAlert, Plus, Search, Filter, RefreshCw, Eye, Calendar, UserCheck, Activity } from 'lucide-react';
 
 export default function StaffDashboard() {
   const { user } = useAuth();
@@ -12,6 +12,7 @@ export default function StaffDashboard() {
   const [rebookings, setRebookings] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [doctors, setDoctors] = useState([]);
+  const [stats, setStats] = useState(null);
   const [filterDate, setFilterDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [selectedDoctor, setSelectedDoctor] = useState('');
   const [loading, setLoading] = useState(true);
@@ -32,18 +33,20 @@ export default function StaffDashboard() {
   const refreshAll = async () => {
     setLoading(true);
     try {
-      const [urgentRes, apprRes, rebookRes, apptsRes, docsRes] = await Promise.all([
+      const [urgentRes, apprRes, rebookRes, apptsRes, docsRes, statsRes] = await Promise.all([
         api.getUrgentCases(),
         api.getApprovals(),
         api.getStaffRebookings(),
         api.getStaffAppointments({ date: filterDate, doctor_id: selectedDoctor || undefined }),
         api.getDoctors(),
+        api.getStaffStats().catch(() => null),
       ]);
       setUrgentCases(urgentRes);
       setApprovals(apprRes);
       setRebookings(rebookRes);
       setAppointments(apptsRes);
       setDoctors(docsRes);
+      if (statsRes) setStats(statsRes);
     } catch (e) {
       console.error(e);
     } finally {
@@ -154,6 +157,63 @@ export default function StaffDashboard() {
           <button className="btn btn-secondary" onClick={refreshAll}>
             <RefreshCw size={14} /> Refresh
           </button>
+        </div>
+      </div>
+
+      {/* Daily Clinic Overview KPIs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+        {/* Total Cases Today */}
+        <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px', borderLeft: '4px solid var(--accent, #FFB7B2)' }}>
+          <div style={{ background: 'rgba(255, 183, 178, 0.25)', padding: '12px', borderRadius: '12px', display: 'flex' }}>
+            <Calendar size={22} color="var(--accent-dark, #e06d64)" />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--muted, #78716c)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Total Cases Today
+            </div>
+            <div style={{ fontSize: '1.65rem', fontWeight: 700, color: 'var(--ink, #292524)', lineHeight: 1.2 }}>
+              {stats ? stats.total_cases_today : appointments.filter(a => a.date === filterDate && a.status !== 'cancelled').length}
+            </div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--muted, #78716c)', marginTop: '2px' }}>
+              Non-cancelled visits on record
+            </div>
+          </div>
+        </div>
+
+        {/* Urgent Cases */}
+        <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px', borderLeft: `4px solid ${urgentCases.length > 0 ? 'var(--danger, #ef4444)' : 'var(--success, #10b981)'}` }}>
+          <div style={{ background: urgentCases.length > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)', padding: '12px', borderRadius: '12px', display: 'flex' }}>
+            <ShieldAlert size={22} color={urgentCases.length > 0 ? 'var(--danger, #ef4444)' : 'var(--success, #10b981)'} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--muted, #78716c)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Urgent Cases
+            </div>
+            <div style={{ fontSize: '1.65rem', fontWeight: 700, color: urgentCases.length > 0 ? 'var(--danger, #ef4444)' : 'var(--ink, #292524)', lineHeight: 1.2 }}>
+              {urgentCases.length}
+            </div>
+            <div style={{ fontSize: '0.78rem', color: urgentCases.length > 0 ? 'var(--danger, #ef4444)' : 'var(--muted, #78716c)', marginTop: '2px', fontWeight: urgentCases.length > 0 ? 600 : 400 }}>
+              {urgentCases.length > 0 ? 'Requires immediate attention' : 'All clear · Zero active red flags'}
+            </div>
+          </div>
+        </div>
+
+        {/* Doctors Available Today */}
+        <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px', borderLeft: '4px solid #3b82f6' }}>
+          <div style={{ background: 'rgba(59, 130, 246, 0.12)', padding: '12px', borderRadius: '12px', display: 'flex' }}>
+            <UserCheck size={22} color="#3b82f6" />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--muted, #78716c)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Doctors On OPD Today
+            </div>
+            <div style={{ fontSize: '1.65rem', fontWeight: 700, color: 'var(--ink, #292524)', lineHeight: 1.2 }}>
+              {stats ? `${stats.doctors_available_today_count} of 5` : '4 of 5'}
+            </div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--muted, #78716c)', marginTop: '2px' }} title={stats?.doctors_available_today?.map(d => d.name).join(', ')}>
+              {stats?.holiday_today ? `Closed: ${stats.holiday_today}` : 'Dr. Khan in surgery on Mondays'}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -426,13 +486,53 @@ export default function StaffDashboard() {
               <tbody>
                 {appointments.map((a) => (
                   <tr key={a.id} style={{ borderBottom: '1px solid var(--line)' }}>
-                    <td style={{ padding: '10px' }} className="mono">{a.id}</td>
+                    <td style={{ padding: '10px' }} className="mono">
+                      <span>{a.id}</span>
+                      {a.source === 'MCP' && (
+                        <span
+                          className="badge badge-danger"
+                          style={{
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            background: '#fee2e2',
+                            color: '#b91c1c',
+                            border: '1px solid #fca5a5',
+                            padding: '1px 5px',
+                            borderRadius: '4px',
+                            marginLeft: '6px',
+                            display: 'inline-block',
+                          }}
+                          title="Booked externally via NetraCare Partner MCP"
+                        >
+                          MCP
+                        </span>
+                      )}
+                    </td>
                     <td style={{ padding: '10px' }} className="mono">{a.start_time} - {a.end_time}</td>
                     <td style={{ padding: '10px', fontWeight: 600 }}>{a.patient_name} ({a.patient_id})</td>
                     <td style={{ padding: '10px' }}>{a.doctor_name}</td>
                     <td style={{ padding: '10px' }}>{a.speciality} ({a.visit_type})</td>
                     <td style={{ padding: '10px' }}>
-                      <span className={`badge badge-${a.status}`}>{a.status}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span className={`badge badge-${a.status}`}>{a.status}</span>
+                        {a.source === 'MCP' && (
+                          <span
+                            className="badge badge-danger"
+                            style={{
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              background: '#fee2e2',
+                              color: '#b91c1c',
+                              border: '1px solid #fca5a5',
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                            }}
+                            title="Booked externally via NetraCare Partner MCP"
+                          >
+                            from MCP
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td style={{ padding: '10px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -607,18 +707,31 @@ export default function StaffDashboard() {
 
               <div className="form-group">
                 <label className="form-label">Time Slot:</label>
-                <div className="slot-grid" style={{ maxHeight: '120px', overflowY: 'auto' }}>
-                  {walkinSlots.map((s) => (
-                    <button
-                      type="button"
-                      key={s.start_time}
-                      className={`slot-btn ${walkinSlot === s.start_time ? 'selected' : ''}`}
-                      onClick={() => setWalkinSlot(s.start_time)}
-                    >
-                      {s.start_time}
-                    </button>
-                  ))}
-                </div>
+                {walkinSlots.length === 0 ? (
+                  <div style={{
+                    padding: '10px 14px',
+                    background: 'var(--bg)',
+                    borderRadius: '8px',
+                    color: 'var(--muted)',
+                    fontSize: '0.85rem',
+                    textAlign: 'center',
+                  }}>
+                    No slots available on {walkinDate} (Doctor off, surgery, clinic holiday, or fully booked).
+                  </div>
+                ) : (
+                  <div className="slot-grid" style={{ maxHeight: '120px', overflowY: 'auto' }}>
+                    {walkinSlots.map((s) => (
+                      <button
+                        type="button"
+                        key={s.start_time}
+                        className={`slot-btn ${walkinSlot === s.start_time ? 'selected' : ''}`}
+                        onClick={() => setWalkinSlot(s.start_time)}
+                      >
+                        {s.start_time}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>

@@ -2,7 +2,7 @@
 Staff can view all doctors' days, book walk-ins, cancel inside 2 hours,
 manage urgent cases, and handle approval queues.
 """
-from datetime import datetime, date as dt_date, time as dt_time, timezone
+from datetime import datetime, date as dt_date, time as dt_time, timezone, timedelta
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -17,12 +17,63 @@ from app.db.models import (
     UrgentCase,
     Approval,
     AuditEvent,
+    WeeklySchedule,
+    DoctorLeave,
+    Holiday,
 )
 from app.api.deps import get_current_staff, CurrentUser
 from app.services.booking import BookingService
 from app.assistant.llm import check_red_flags_with_llm
 
 router = APIRouter(prefix="/staff", tags=["Staff"])
+
+@router.get("/stats")
+def get_staff_stats(
+    staff: CurrentUser = Depends(get_current_staff),
+    db: Session = Depends(get_db),
+):
+    """Return clinic daily summary metrics for the staff care coordination desk."""
+    now = get_clinic_now()
+    today = now.date()
+    tomorrow = today + timedelta(days=1)
+    weekday = now.strftime("%a")
+
+    total_cases_today = db.query(Appointment).filter(
+        Appointment.date == today,
+        Appointment.status != "cancelled",
+    ).count()
+
+    urgent_cases_count = db.query(UrgentCase).filter(
+        UrgentCase.status == "OPEN",
+    ).count()
+
+    holiday_today = db.query(Holiday).filter(Holiday.date == today).first()
+    holiday_tomorrow = db.query(Holiday).filter(Holiday.date == tomorrow).first()
+
+    docs = db.query(Doctor).filter(Doctor.active == True).all()
+    available_docs = []
+    if not holiday_today:
+        for d in docs:
+            leave = db.query(DoctorLeave).filter(DoctorLeave.doctor_id == d.id, DoctorLeave.date == today).first()
+            sched = db.query(WeeklySchedule).filter(WeeklySchedule.doctor_id == d.id, WeeklySchedule.day == weekday).all()
+            has_opd = any(s.status == "OPD" for s in sched)
+            if has_opd and not leave:
+                available_docs.append({
+                    "id": d.id,
+                    "name": d.name,
+                    "specialities": d.specialities,
+                })
+
+    return {
+        "today": today.isoformat(),
+        "tomorrow": tomorrow.isoformat(),
+        "total_cases_today": total_cases_today,
+        "urgent_cases_count": urgent_cases_count,
+        "doctors_available_today_count": len(available_docs),
+        "doctors_available_today": available_docs,
+        "holiday_today": holiday_today.name if holiday_today else None,
+        "holiday_tomorrow": holiday_tomorrow.name if holiday_tomorrow else None,
+    }
 
 class StaffBookRequest(BaseModel):
     patient_id: str

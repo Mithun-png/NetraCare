@@ -74,6 +74,7 @@ export const api = {
   getDoctorLeaves: () => request('/doctor/leaves'),
 
   // Staff
+  getStaffStats: () => request('/staff/stats'),
   getStaffAppointments: (params = {}) => {
     const q = new URLSearchParams();
     if (params.date) q.append('date', params.date);

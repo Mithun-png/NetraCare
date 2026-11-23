@@ -10,6 +10,7 @@ export default function PatientDashboard() {
   const { user } = useAuth();
   const [appointments, setAppointments] = useState([]);
   const [doctors, setDoctors] = useState([]);
+  const [holidays, setHolidays] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Booking form state
@@ -54,6 +55,7 @@ export default function PatientDashboard() {
         setSpeciality(docs[0].specialities[0]);
       }
     });
+    api.getHolidays().then(setHolidays).catch(() => {});
     refreshAppointments().finally(() => setLoading(false));
   }, []);
 
@@ -301,16 +303,37 @@ export default function PatientDashboard() {
             <div className="form-group">
               <label className="form-label">Available Slots</label>
               {slots.length === 0 ? (
-                <div style={{
-                  padding: '12px',
-                  background: 'var(--bg)',
-                  borderRadius: '8px',
-                  color: 'var(--muted)',
-                  fontSize: '0.88rem',
-                  textAlign: 'center',
-                }}>
-                  No available slots on this date (Closed, Surgery, Off, or Fully Booked).
-                </div>
+                (() => {
+                  const matchedHoliday = holidays.find((h) => h.date === date);
+                  const parsedDate = new Date(date + 'T00:00:00');
+                  const isMonday = parsedDate.getDay() === 1;
+                  const isSunday = parsedDate.getDay() === 0;
+                  const isFatimaKhan = doctorId === 'D4';
+
+                  let message = 'No available slots on this date (Closed, Surgery, Off, or Fully Booked).';
+                  if (matchedHoliday) {
+                    message = `Clinic Closed: ${matchedHoliday.name} (Official Holiday)`;
+                  } else if (isSunday) {
+                    message = 'Clinic is Closed on Sundays.';
+                  } else if (isFatimaKhan && isMonday) {
+                    message = 'Dr. Fatima Khan is scheduled for Surgery all day on Mondays.';
+                  }
+
+                  return (
+                    <div style={{
+                      padding: '12px',
+                      background: matchedHoliday ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg)',
+                      border: matchedHoliday ? '1px solid rgba(239, 68, 68, 0.25)' : 'none',
+                      borderRadius: '8px',
+                      color: matchedHoliday ? 'var(--danger, #ef4444)' : 'var(--muted)',
+                      fontSize: '0.88rem',
+                      textAlign: 'center',
+                      fontWeight: matchedHoliday ? 600 : 400,
+                    }}>
+                      {message}
+                    </div>
+                  );
+                })()
               ) : (
                 <div className="slot-grid">
                   {slots.map((s) => (
