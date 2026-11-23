@@ -105,9 +105,9 @@ npm run dev
 
 ---
 
-## 🧪 Automated Test Suite (63 Tests, 100% Passing)
+## 🧪 Automated Test Suite (87 Tests, 100% Passing)
 
-Run the comprehensive pytest suite verifying all clinic scheduling rules, API contracts, safety triage, Iteration 2 LLM summaries, and Iteration 3 RAG patient chat:
+Run the comprehensive pytest suite verifying all clinic scheduling rules, API contracts, safety triage, Iteration 2 LLM summaries, Iteration 3 RAG patient chat, Iteration 4 LangGraph agent, Iteration 6 MCP/skills, and Iteration 7 OCR/dilation timer:
 
 ```powershell
 $env:PYTHONPATH="backend"
@@ -229,6 +229,7 @@ python run_evals.py --large
 - **Iteration 4 (Completed)**: LangGraph conversational booking agent, confirmation cards, staff approvals (<2hr late cancel/reschedule), doctor leave rebooking engine (R7).
 - **Iteration 5 (Completed)**: Full offline evaluation suite (`run_evals.py`), Opik observability & tracing (`netracare-dev`, `netracare-evals`), safety judge calibration (12/12), independent rule auditor, RAGAS metrics report (`evals/results/summary.md`).
 - **Iteration 6 (Completed)**: NetraCare Partner MCP Server (`mcp_server.py` on `http://localhost:8001/mcp`), CityCare Hospital Lab MCP Client integration (`http://localhost:8002/mcp`), Agent Skills (`cataract-surgery-care`, `lasik-suitability-intake`, `prepare-for-visit`, `children-visit`), directory traversal guards, `intake_notes` on doctor appointments, and "Booked via MCP" staff badges.
+- **Iteration 7 (Completed)**: Dual-mode chatbot (full-page `/chat` + floating widget on every page via `ChatContext`), HITL doctor leave/surgery/double-booking re-routing (agent suggests alternative slots automatically), prescription/referral OCR intake (`POST /api/v1/intake/ocr` — red-flag screened, zero-diagnosis), live dilation drop timer (`visit_stage` lifecycle: SCHEDULED → CHECKED_IN → DILATING → READY → COMPLETED with real-time countdown for patient & staff), intelligent specialist suggestion in chat with natural date resolution ("today"/"tomorrow"/weekday), and official NetraCare brand assets (logo, favicon, emblem) integrated across the portal.
 
 ---
 
