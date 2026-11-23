@@ -116,15 +116,37 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
     combined_user_text = " ".join([m.content for m in user_msgs if isinstance(m.content, str)])
     comb_lower = combined_user_text.lower()
 
+    # Check if previous assistant message asked for visit reason
+    last_ai_content = ""
+    for m in reversed(messages[:-1]):
+        if isinstance(m, AIMessage) and m.content:
+            last_ai_content = m.content.lower()
+            break
+
+    is_answering_reason = any(
+        phrase in last_ai_content
+        for phrase in [
+            "provide the reason for your visit",
+            "reason for your visit so i can book it",
+            "what is the reason for your visit",
+            "could you please provide the reason",
+        ]
+    )
+
     # Search for reason across all user messages
-    reason_match = None
+    reason_val = None
     for m in reversed(user_msgs):
         text_content = m.content if isinstance(m.content, str) else str(m.content)
         match = re.search(r"reason:\s*([^|]+)", text_content, re.IGNORECASE)
         if match:
-            reason_match = match
+            reason_val = match.group(1).strip()
             break
-    has_reason = bool(reason_match)
+
+    if not reason_val and is_answering_reason:
+        # User is directly providing the reason in response to assistant's question
+        reason_val = latest_text.strip()
+
+    has_reason = bool(reason_val)
 
     # If the last message was a tool message, form the final agent response
     last_tool = messages[-1] if (messages and isinstance(messages[-1], ToolMessage)) else None
@@ -223,8 +245,19 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
             
             # Check if user asked to book right away
             if "book" in comb_lower or "please book" in comb_lower or has_reason or "yes" in q_lower or "fine" in q_lower or "ok" in q_lower:
-                slot = tool_data[0]
-                reason_val = reason_match.group(1).strip() if reason_match else "Consultation"
+                time_match = re.search(r"\b(\d{1,2}:\d{2})\b", comb_lower)
+                slot = None
+                if time_match:
+                    t_str = time_match.group(1)
+                    if len(t_str) == 4 and t_str[1] == ':':
+                        t_str = "0" + t_str
+                    for s in tool_data:
+                        if s.get("start_time") == t_str:
+                            slot = s
+                            break
+                if not slot:
+                    slot = tool_data[0]
+                reason_final = reason_val if reason_val else "Consultation"
                 return AIMessage(
                     content="",
                     tool_calls=[{
@@ -235,7 +268,7 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
                             "visit_type": slot["visit_type"],
                             "date": slot["date"],
                             "start_time": slot["start_time"],
-                            "reason": reason_val,
+                            "reason": reason_final,
                         },
                         "id": "call_book_1",
                     }],
@@ -397,7 +430,7 @@ def deterministic_agent_step(messages: List[BaseMessage], patient_id: str, db) -
             )
 
     # 4. General Q&A / Clinic Docs Queries
-    has_booking_intent = any(k in q_lower for k in [
+    has_booking_intent = is_answering_reason or any(k in q_lower for k in [
         "book", "reschedule", "cancel", "move my appointment", "actually, make it",
         "can you book", "reserve", "see someone on saturday", "the earliest time",
         "what appointment", "check-up on", "appointment with dr", "appointment tomorrow",

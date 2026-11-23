@@ -29,7 +29,9 @@ frontend/dist/
 dist/
 .vite/
 
-# IDE / OS
+# Presentation / Local Docs
+PRESENTATION.md
+
 .vscode/
 .idea/
 .codex/
